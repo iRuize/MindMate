@@ -40,6 +40,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <!-- Spring Boot 依赖管理 -->
     <dependencyManagement>
         <dependencies>
             <dependency>
