@@ -1,18 +1,67 @@
-# Node.js
+# 日志文件
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node.js 依赖和构建产物（前端）
 MindMate_front/node_modules
 MindMate_front/dist
+MindMate_front/dist-ssr
 MindMate_front/.env
 
-# Java / Maven
-MindMate_backend/target
-MindMate_backend/.idea
-MindMate_backend/.classpath
-MindMate_backend/.project
-MindMate_backend/.settings/
+# 测试截图和视频（前端）
+MindMate_front/cypress/videos/
+MindMate_front/cypress/screenshots/
+
+# TypeScript 缓存文件（前端）
+*.tsbuildinfo
+
+# Java / Maven 相关（后端）
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# STS IDE 文件（后端）
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# IntelliJ IDEA 文件（后端）
+.idea
+*.iws
+*.iml
+*.ipr
+
+# NetBeans 文件（后端）
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
 
 # OS 临时文件
 .DS_Store
 Thumbs.db
 
-# VS Code 配置（可选保留）
-.vscode/
+# 编辑器配置
+.vscode/*
+!.vscode/extensions.json
+
+# 其他编辑器临时文件
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
