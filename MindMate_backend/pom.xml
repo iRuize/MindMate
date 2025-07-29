@@ -19,6 +19,8 @@
         <java.version>17</java.version>
         <spring-boot.version>2.6.13</spring-boot.version>
         <spring-cloud.version>2021.0.4</spring-cloud.version>
+        <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
+        <lombok.version>1.18.20</lombok.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
@@ -35,6 +37,12 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
             <!-- Spring Cloud Dependencies BOM -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
@@ -44,6 +52,11 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
