@@ -5,5 +5,5 @@ import ruize.mindmateauth.result.Result;
 
 public interface UserService {
     Result<Integer> sendSmsCode(String phoneNumber);
-    int login(String username, String password);
+    Result<Integer> smsLogin(String phoneNumber, String smsCodeInput);
 }

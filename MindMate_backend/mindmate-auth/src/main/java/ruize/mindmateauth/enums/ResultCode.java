@@ -1,15 +1,15 @@
 package ruize.mindmateauth.enums;
 
-import lombok.Data;
+import lombok.Getter;
 
+@Getter
 public enum ResultCode {
-    //登陆成功
-    SUCCESS(200, "登录成功"),
-//    短信验证码
+    // 登录功能-短信验证码
     SEND_CODE_SUCCESS(201, "短信验证码发送成功"),
-    SEND_CODE_FAILED(202,"验证码发送失败"),
-    UNAUTHORIZED(401, "未授权"),
-    ERROR(500, "服务器错误");
+    SEND_CODE_FAILED(202, "验证码发送失败，请先进行注册"),
+    SMSCODE_EXPIRED(203, "验证码已过期，请重新获取"),
+    SMS_LOGIN_SUCCESS(204, "验证码校验成功，登录成功"),
+    SMS_LOGIN_FAILED(205, "验证码错误，登录失败");
 
     private final int code;
     private final String message;
@@ -19,10 +19,4 @@ public enum ResultCode {
         this.message = message;
     }
 
-    public int getCode() {
-        return code;
-    }
-    public String getMessage() {
-        return message;
-    }
 }

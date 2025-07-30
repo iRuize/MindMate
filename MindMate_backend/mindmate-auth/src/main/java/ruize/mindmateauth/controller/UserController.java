@@ -1,13 +1,9 @@
 package ruize.mindmateauth.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import ruize.mindmateauth.result.Result;
 import ruize.mindmateauth.service.UserService;
-
-import java.util.Random;
 
 @RestController
 @RequestMapping("/auth")
@@ -17,15 +13,19 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/sendSmsCode")
-    //前端传递“phoneNumber”
-    public int SentSmsCode(@RequestParam("phoneNumber") String phoneNumber) {
-        userService.sendSmsCode(phoneNumber);
-        return 1;
+    // 前端传递“phoneNumber”
+    public int sendSmsCode(@RequestParam("phoneNumber") String phoneNumber) {
+        Result<Integer> result = userService.sendSmsCode(phoneNumber);
+        if (result.getCode() == 201) {
+            System.out.println(result.getData());
+            return result.getData();
+        }
+        return result.getCode();
     }
 
-    @RequestMapping("/userLogin")
-    public int userLogin(String username, String smsCode) {
-        return 0;
+    @PostMapping("/userLogin")
+    public Result<Integer> smsLogin(String phoneNumber, String smsCode) {
+        return userService.smsLogin(phoneNumber, smsCode);
     }
 
 }
