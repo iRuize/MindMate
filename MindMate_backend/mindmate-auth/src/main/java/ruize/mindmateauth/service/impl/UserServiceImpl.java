@@ -15,10 +15,14 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserServiceImpl implements UserService {
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+
+    private final UserMapper userMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public UserServiceImpl(UserMapper userMapper, StringRedisTemplate stringRedisTemplate) {
+        this.userMapper = userMapper;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     // 发送短信验证码
     @Override

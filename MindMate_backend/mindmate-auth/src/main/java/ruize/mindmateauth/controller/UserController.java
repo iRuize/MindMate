@@ -9,8 +9,11 @@ import ruize.mindmateauth.service.UserService;
 @RequestMapping("/auth")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping("/sendSmsCode")
     // 前端传递“phoneNumber”
