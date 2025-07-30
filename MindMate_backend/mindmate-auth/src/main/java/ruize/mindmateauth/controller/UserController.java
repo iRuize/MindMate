@@ -1,6 +1,5 @@
 package ruize.mindmateauth.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ruize.mindmateauth.result.Result;
 import ruize.mindmateauth.service.UserService;
