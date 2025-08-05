@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 public class SmsCode {
     /**
      * 生成6位数字验证码
+     *
      * @return 6位数字验证码
      */
     public static int generateSmsCode() {
