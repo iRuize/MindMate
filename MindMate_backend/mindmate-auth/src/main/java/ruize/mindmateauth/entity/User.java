@@ -16,5 +16,4 @@ public class User {
     private String realName;
     private String personalizedSignature;
     private String email;
-
 }
