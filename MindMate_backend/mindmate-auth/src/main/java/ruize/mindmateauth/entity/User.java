@@ -13,7 +13,7 @@ import lombok.experimental.Accessors;
 public class User {
     private String phoneNumber;
     private String username;
-    private String realname;
+    private String realName;
     private String personalizedSignature;
     private String email;
 
