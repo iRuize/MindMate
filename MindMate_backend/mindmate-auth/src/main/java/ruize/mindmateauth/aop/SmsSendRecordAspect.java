@@ -9,6 +9,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 @Aspect
 @Component
@@ -17,6 +19,7 @@ public class SmsSendRecordAspect {
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         // 记录当前时间
         LocalDateTime now = LocalDateTime.now();
+        String time = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         // 获取请求信息（IP）
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         String ip = "unknown";
@@ -29,7 +32,8 @@ public class SmsSendRecordAspect {
         }
         // TODO将用户发送验证码时间以及IP地址写入数据库
         System.out.println("IP: " + ip);
-        System.out.println("发送时间: " + now);
+        System.out.println("发送时间: " + time);
+        // 将发送信息写入到Mysql
         // proceed()执行目标方法（必须调用，否则原方法不执行），result是原方法的返回值
         Object result = joinPoint.proceed();
         // 在方法执行后输出
