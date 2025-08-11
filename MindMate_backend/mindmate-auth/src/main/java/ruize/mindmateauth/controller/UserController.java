@@ -16,13 +16,13 @@ public class UserController {
 
     @GetMapping("/sendSmsCode")
     // 前端传递“phoneNumber”
-    public int sendSmsCode(@RequestParam("phoneNumber") String phoneNumber) {
+    public Result<Integer> sendSmsCode(@RequestParam("phoneNumber") String phoneNumber) {
         Result<Integer> result = userService.sendSmsCode(phoneNumber);
         if (result.getCode() == 201) {
             System.out.println(result.getData());
-            return result.getData();
+            return result;
         }
-        return result.getCode();
+        return result;
     }
 
     @PostMapping("/userLogin")
