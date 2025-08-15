@@ -1,59 +1,59 @@
 <script setup>
-import '@fortawesome/fontawesome-free/css/all.css'
-document.addEventListener('DOMContentLoaded', function () {
-    const loginForm = document.getElementById('loginForm')
-    const usernameInput = document.getElementById('username')
-    const passwordInput = document.getElementById('password')
-    const togglePassword = document.getElementById('togglePassword')
-    const errorMessage = document.getElementById('errorMessage')
+import "@fortawesome/fontawesome-free/css/all.css";
+document.addEventListener("DOMContentLoaded", function () {
+    const loginForm = document.getElementById("loginForm");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+    const errorMessage = document.getElementById("errorMessage");
 
-    togglePassword.addEventListener('click', function () {
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password'
-        passwordInput.setAttribute('type', type)
-        this.classList.toggle('fa-eye')
-        this.classList.toggle('fa-eye-slash')
-    })
+    togglePassword.addEventListener("click", function () {
+        const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+        passwordInput.setAttribute("type", type);
+        this.classList.toggle("fa-eye");
+        this.classList.toggle("fa-eye-slash");
+    });
 
-    loginForm.addEventListener('submit', function (event) {
-        event.preventDefault()
-        errorMessage.textContent = ''
-        usernameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)'
-        passwordInput.style.borderColor = 'rgba(255, 255, 255, 0.5)'
+    loginForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        errorMessage.textContent = "";
+        usernameInput.style.borderColor = "rgba(255, 255, 255, 0.5)";
+        passwordInput.style.borderColor = "rgba(255, 255, 255, 0.5)";
 
-        const username = usernameInput.value.trim()
-        const password = passwordInput.value.trim()
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
 
-        if (username === '' && password === '') {
-            errorMessage.textContent = '请输入用户名和密码'
-            usernameInput.style.borderColor = '#ffcccc'
-            passwordInput.style.borderColor = '#ffcccc'
-            return
+        if (username === "" && password === "") {
+            errorMessage.textContent = "请输入用户名和密码";
+            usernameInput.style.borderColor = "#ffcccc";
+            passwordInput.style.borderColor = "#ffcccc";
+            return;
         }
 
-        if (username === '') {
-            errorMessage.textContent = '请输入用户名'
-            usernameInput.style.borderColor = '#ffcccc'
-            return
+        if (username === "") {
+            errorMessage.textContent = "请输入用户名";
+            usernameInput.style.borderColor = "#ffcccc";
+            return;
         }
 
-        if (password === '') {
-            errorMessage.textContent = '请输入密码'
-            passwordInput.style.borderColor = '#ffcccc'
-            return
+        if (password === "") {
+            errorMessage.textContent = "请输入密码";
+            passwordInput.style.borderColor = "#ffcccc";
+            return;
         }
 
-        console.log('正在尝试登录...')
-        console.log('用户名:', username)
-        console.log('密码:', password)
+        console.log("正在尝试登录...");
+        console.log("用户名:", username);
+        console.log("密码:", password);
 
-        errorMessage.style.color = '#cceeff'
-        errorMessage.textContent = '登录成功！正在跳转...'
+        errorMessage.style.color = "#cceeff";
+        errorMessage.textContent = "登录成功！正在跳转...";
 
         setTimeout(() => {
-            alert(`欢迎您, ${username}!`)
-        }, 1500)
-    })
-})
+            alert(`欢迎您, ${username}!`);
+        }, 1500);
+    });
+});
 </script>
 
 <template>
@@ -93,8 +93,8 @@ document.addEventListener('DOMContentLoaded', function () {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family:
-        'Helvetica Neue', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', 'Microsoft Yahei', sans-serif;
+    font-family: "Helvetica Neue", "Hiragino Sans GB", "WenQuanYi Micro Hei",
+        "Microsoft Yahei", sans-serif;
 }
 
 body {
