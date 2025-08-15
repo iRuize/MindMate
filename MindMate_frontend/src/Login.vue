@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <template>
     <div class="login-container">
         <form id="loginForm">
-            <h1>欢迎回来</h1>
+            <h1>MindMate</h1>
 
             <div class="input-box">
                 <input type="text" id="username" placeholder="用户名 / 邮箱" required />
@@ -106,7 +106,6 @@ body {
     overflow: hidden;
 }
 
-/* --- 登录表单容器 --- */
 .login-container {
     width: 420px;
     background: rgba(255, 255, 255, 0.1);
@@ -119,7 +118,6 @@ body {
     position: relative;
 }
 
-/* --- 标题 --- */
 .login-container h1 {
     font-size: 36px;
     text-align: center;
@@ -127,7 +125,6 @@ body {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* --- 输入框组 --- */
 .input-box {
     position: relative;
     width: 100%;
@@ -150,17 +147,14 @@ body {
     transition: border-color 0.3s ease;
 }
 
-/* 输入框占位符颜色 */
 .input-box input::placeholder {
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* 输入框聚焦时的样式 */
 .input-box input:focus {
     border-color: #fff;
 }
 
-/* 【CSS 修改】: 定义所有图标的通用样式 */
 .input-box .icon {
     position: absolute;
     top: 50%;
@@ -170,27 +164,22 @@ body {
     transition: color 0.3s ease;
 }
 
-/* 【CSS 新增】: 左侧图标的定位 */
 .input-box .icon-left {
     left: 15px;
 }
 
-/* 【CSS 新增】: 右侧图标的定位 */
 .input-box .icon-right {
     right: 20px;
 }
 
-/* 输入框聚焦时，其内部所有图标都变色 */
 .input-box input:focus~.icon {
     color: #fff;
 }
 
-/* 密码可见性切换图标的特殊样式 */
 .input-box .toggle-password {
     cursor: pointer;
 }
 
-/* --- 选项 (记住我 & 忘记密码) --- */
 .options {
     display: flex;
     justify-content: space-between;
@@ -217,7 +206,6 @@ body {
     text-decoration: underline;
 }
 
-/* --- 登录按钮 --- */
 .btn {
     width: 100%;
     height: 45px;
@@ -239,7 +227,6 @@ body {
     transform: scale(1.02);
 }
 
-/* --- 注册链接 --- */
 .register-link {
     font-size: 14.5px;
     text-align: center;
@@ -260,7 +247,6 @@ body {
     text-decoration: underline;
 }
 
-/* --- 错误提示信息 --- */
 .error-message {
     color: #ffcccc;
     font-size: 14px;
