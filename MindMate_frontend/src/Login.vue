@@ -1,258 +1,296 @@
 <script setup>
-import "@fortawesome/fontawesome-free/css/all.css";
-document.addEventListener("DOMContentLoaded", function () {
-    const loginForm = document.getElementById("loginForm");
-    const usernameInput = document.getElementById("username");
-    const passwordInput = document.getElementById("password");
-    const togglePassword = document.getElementById("togglePassword");
-    const errorMessage = document.getElementById("errorMessage");
+import { ref } from 'vue'
+import axios from 'axios'
 
-    togglePassword.addEventListener("click", function () {
-        const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
-        passwordInput.setAttribute("type", type);
-        this.classList.toggle("fa-eye");
-        this.classList.toggle("fa-eye-slash");
-    });
+const phoneNumber = ref('')
 
-    loginForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-        errorMessage.textContent = "";
-        usernameInput.style.borderColor = "rgba(255, 255, 255, 0.5)";
-        passwordInput.style.borderColor = "rgba(255, 255, 255, 0.5)";
+const sendSmsCode = async () => {
+  const phone = phoneNumber.value.trim();
+  if (!phone) {
+    alert('请输入手机号')
+    return
+  }
 
-        const username = usernameInput.value.trim();
-        const password = passwordInput.value.trim();
+  try {
+    // 使用 axios 发 GET 请求
+    const response = await axios.get('http://localhost:8080/auth/sendSmsCode', {
+      params: { phoneNumber: phone }
+    })
 
-        if (username === "" && password === "") {
-            errorMessage.textContent = "请输入用户名和密码";
-            usernameInput.style.borderColor = "#ffcccc";
-            passwordInput.style.borderColor = "#ffcccc";
-            return;
-        }
+    if (response.data.code === 200) {
+      alert('验证码发送成功')
+    } else {
+      alert(response.data.message) // 弹出后端返回的提示
+    }
 
-        if (username === "") {
-            errorMessage.textContent = "请输入用户名";
-            usernameInput.style.borderColor = "#ffcccc";
-            return;
-        }
-
-        if (password === "") {
-            errorMessage.textContent = "请输入密码";
-            passwordInput.style.borderColor = "#ffcccc";
-            return;
-        }
-
-        console.log("正在尝试登录...");
-        console.log("用户名:", username);
-        console.log("密码:", password);
-
-        errorMessage.style.color = "#cceeff";
-        errorMessage.textContent = "登录成功！正在跳转...";
-
-        setTimeout(() => {
-            alert(`欢迎您, ${username}!`);
-        }, 1500);
-    });
-});
+  } catch (error) {
+    console.error(error)
+    alert('网络错误')
+  }
+}
 </script>
 
 <template>
-    <div class="login-container">
-        <form id="loginForm">
-            <h1>MindMate</h1>
+  <div class="center-container">
+    <span>MindMate</span>
+    <div class="login-box">
+      <!-- 左侧扫码登录 -->
+      <div class="login-left">
+        <h3>扫码登录</h3>
+        <div class="qrcode">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MindMateLogin" alt="二维码登录">
+        </div>
+      </div>
 
-            <div class="input-box">
-                <input type="text" id="username" placeholder="用户名 / 邮箱" required />
-                <i class="fa-solid fa-user icon icon-left"></i>
-            </div>
-
-            <div class="input-box">
-                <input type="password" id="password" placeholder="密码" required />
-                <i class="fa-solid fa-lock icon icon-left"></i>
-                <i class="fa-solid fa-eye-slash toggle-password icon icon-right" id="togglePassword"></i>
-            </div>
-
-            <div id="errorMessage" class="error-message"></div>
-
-            <div class="options">
-                <label><input type="checkbox" /> 记住我</label>
-                <a href="#">忘记密码?</a>
-            </div>
-
-            <button type="submit" class="btn">登 录</button>
-
-            <div class="register-link">
-                <p>还没有账户? <a href="#">立即注册</a></p>
-            </div>
-        </form>
+      <!-- 右侧短信验证码登录 -->
+      <div class="login-right">
+        <h3>短信验证码登录</h3>
+        <input type="text" placeholder="请输入手机号" v-model="phoneNumber">
+        <div class="code-input">
+          <input type="text" placeholder="请输入验证码">
+          <button @click="sendSmsCode">发送验证码</button>
+        </div>
+        <button class="login-btn">登录</button>
+      </div>
     </div>
+  </div>
 </template>
 
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: "Helvetica Neue", "Hiragino Sans GB", "WenQuanYi Micro Hei",
-        "Microsoft Yahei", sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Quicksand&display=swap');
+
+/* 背景部分 */
+:root {
+  font-size: 15px;
 }
 
 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #71b7e6, #9b59b6);
-    overflow: hidden;
+  font-family: 'Quicksand', sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background-color: #e493d0;
+  background-image:
+    radial-gradient(closest-side, rgba(235, 105, 78, 1), rgba(235, 105, 78, 0)),
+    radial-gradient(closest-side, rgba(243, 11, 164, 1), rgba(243, 11, 164, 0)),
+    radial-gradient(closest-side, rgba(254, 234, 131, 1), rgba(254, 234, 131, 0)),
+    radial-gradient(closest-side, rgba(170, 142, 245, 1), rgba(170, 142, 245, 0)),
+    radial-gradient(closest-side, rgba(248, 192, 147, 1), rgba(248, 192, 147, 0));
+  background-size:
+    130vmax 130vmax,
+    80vmax 80vmax,
+    90vmax 90vmax,
+    110vmax 110vmax,
+    90vmax 90vmax;
+  background-position:
+    -80vmax -80vmax,
+    60vmax -30vmax,
+    10vmax 10vmax,
+    -30vmax -10vmax,
+    50vmax 50vmax;
+  background-repeat: no-repeat;
+  animation: 8s movement linear infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.login-container {
-    width: 420px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
-    border-radius: 15px;
-    padding: 40px;
-    color: #fff;
-    position: relative;
+body::after {
+  content: '';
+  display: block;
+  position: fixed;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.login-container h1 {
-    font-size: 36px;
-    text-align: center;
-    margin-bottom: 30px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+span {
+  font-size: 5rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0px 0px 1px rgba(255, 255, 255, .6),
+    0px 4px 4px rgba(0, 0, 0, .05);
+  letter-spacing: .2rem;
 }
 
-.input-box {
-    position: relative;
-    width: 100%;
-    height: 50px;
-    margin-bottom: 25px;
+@keyframes movement {
+
+  0%,
+  100% {
+    background-size:
+      130vmax 130vmax,
+      80vmax 80vmax,
+      90vmax 90vmax,
+      110vmax 110vmax,
+      90vmax 90vmax;
+    background-position:
+      -80vmax -80vmax,
+      60vmax -30vmax,
+      10vmax 10vmax,
+      -30vmax -10vmax,
+      50vmax 50vmax;
+  }
+
+  25% {
+    background-size:
+      100vmax 100vmax,
+      90vmax 90vmax,
+      100vmax 100vmax,
+      90vmax 90vmax,
+      60vmax 60vmax;
+    background-position:
+      -60vmax -90vmax,
+      50vmax -40vmax,
+      0vmax -20vmax,
+      -40vmax -20vmax,
+      40vmax 60vmax;
+  }
+
+  50% {
+    background-size:
+      80vmax 80vmax,
+      110vmax 110vmax,
+      80vmax 80vmax,
+      60vmax 60vmax,
+      80vmax 80vmax;
+    background-position:
+      -50vmax -70vmax,
+      40vmax -30vmax,
+      10vmax 0vmax,
+      20vmax 10vmax,
+      30vmax 70vmax;
+  }
+
+  75% {
+    background-size:
+      90vmax 90vmax,
+      90vmax 90vmax,
+      100vmax 100vmax,
+      90vmax 90vmax,
+      70vmax 70vmax;
+    background-position:
+      -50vmax -40vmax,
+      50vmax -30vmax,
+      20vmax 0vmax,
+      -10vmax 10vmax,
+      40vmax 60vmax;
+  }
 }
 
-.input-box input {
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    border-radius: 40px;
-    font-size: 16px;
-    color: #fff;
-    /* 【CSS 修改】: 调整内边距，为左右图标都留出空间 */
-    padding: 0 45px 0 45px;
-    transition: border-color 0.3s ease;
+.center-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  text-align: center;
+  gap: 50px;
 }
 
-.input-box input::placeholder {
-    color: rgba(255, 255, 255, 0.8);
+/* 登录窗口部分 */
+.login-form {
+  width: 600px;
+  max-width: 90vw;
+  margin-top: 30px;
+  padding: 30px;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-.input-box input:focus {
-    border-color: #fff;
+.title {
+  font-size: 32px;
+  color: white;
+  margin-bottom: 40px;
+  font-weight: bold;
 }
 
-.input-box .icon {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 20px;
-    color: rgba(255, 255, 255, 0.8);
-    transition: color 0.3s ease;
+.login-box {
+  display: flex;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  overflow: hidden;
+  width: 900px;
+  max-width: 95%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  height: 400px;
 }
 
-.input-box .icon-left {
-    left: 15px;
+.login-left,
+.login-right {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.input-box .icon-right {
-    right: 20px;
+.login-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.input-box input:focus~.icon {
-    color: #fff;
+.login-left h3,
+.login-right h3 {
+  margin-bottom: 20px;
+  color: white;
+  font-weight: 500;
 }
 
-.input-box .toggle-password {
-    cursor: pointer;
+.qrcode img {
+  width: 150px;
+  height: 150px;
+  border-radius: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.options {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14.5px;
-    margin-bottom: 30px;
+.login-right input {
+  width: 80%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
 }
 
-.options label {
-    color: rgba(255, 255, 255, 0.9);
-    cursor: pointer;
+.code-input {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-.options label input {
-    accent-color: #fff;
-    margin-right: 5px;
+.code-input input {
+  flex: 1;
 }
 
-.options a {
-    color: rgba(255, 255, 255, 0.9);
-    text-decoration: none;
+.code-input button,
+.login-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  cursor: pointer;
 }
 
-.options a:hover {
-    text-decoration: underline;
+.code-input button:hover,
+.login-btn:hover {
+  background-color: rgba(255, 255, 255, 0.5);
 }
 
-.btn {
-    width: 100%;
-    height: 45px;
-    background: #fff;
-    border: none;
-    outline: none;
-    border-radius: 40px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    font-size: 16px;
-    color: #333;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    background: linear-gradient(135deg, #a881d4, #71b7e6);
-    color: #fff;
-    transform: scale(1.02);
-}
-
-.register-link {
-    font-size: 14.5px;
-    text-align: center;
-    margin-top: 20px;
-}
-
-.register-link p {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.register-link p a {
-    color: #fff;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.register-link p a:hover {
-    text-decoration: underline;
-}
-
-.error-message {
-    color: #ffcccc;
-    font-size: 14px;
-    text-align: center;
-    margin-top: -15px;
-    margin-bottom: 15px;
-    height: 20px;
+.login-btn {
+  padding: 15px 20px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  width: 160px;
 }
 </style>
