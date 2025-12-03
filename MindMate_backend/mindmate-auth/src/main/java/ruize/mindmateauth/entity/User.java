@@ -1,6 +1,5 @@
 package ruize.mindmateauth.entity;
 
-import io.lettuce.core.dynamic.annotation.Key;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

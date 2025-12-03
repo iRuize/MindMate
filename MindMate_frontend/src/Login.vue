@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import {ref} from 'vue'
 import axios from 'axios'
 
 const phoneNumber = ref('')
@@ -14,7 +14,7 @@ const sendSmsCode = async () => {
   try {
     // 使用 axios 发 GET 请求
     const response = await axios.get('http://localhost:8080/auth/sendSmsCode', {
-      params: { phoneNumber: phone }
+      params: {phoneNumber: phone}
     })
 
     if (response.data.code === 200) {
@@ -38,16 +38,16 @@ const sendSmsCode = async () => {
       <div class="login-left">
         <h3>扫码登录</h3>
         <div class="qrcode">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MindMateLogin" alt="二维码登录">
+          <img alt="二维码登录" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MindMateLogin">
         </div>
       </div>
 
       <!-- 右侧短信验证码登录 -->
       <div class="login-right">
         <h3>短信验证码登录</h3>
-        <input type="text" placeholder="请输入手机号" v-model="phoneNumber">
+        <input v-model="phoneNumber" placeholder="请输入手机号" type="text">
         <div class="code-input">
-          <input type="text" placeholder="请输入验证码">
+          <input placeholder="请输入验证码" type="text">
           <button @click="sendSmsCode">发送验证码</button>
         </div>
         <button class="login-btn">登录</button>
@@ -69,24 +69,21 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: #e493d0;
-  background-image:
-    radial-gradient(closest-side, rgba(235, 105, 78, 1), rgba(235, 105, 78, 0)),
-    radial-gradient(closest-side, rgba(243, 11, 164, 1), rgba(243, 11, 164, 0)),
-    radial-gradient(closest-side, rgba(254, 234, 131, 1), rgba(254, 234, 131, 0)),
-    radial-gradient(closest-side, rgba(170, 142, 245, 1), rgba(170, 142, 245, 0)),
-    radial-gradient(closest-side, rgba(248, 192, 147, 1), rgba(248, 192, 147, 0));
-  background-size:
-    130vmax 130vmax,
-    80vmax 80vmax,
-    90vmax 90vmax,
-    110vmax 110vmax,
-    90vmax 90vmax;
-  background-position:
-    -80vmax -80vmax,
-    60vmax -30vmax,
-    10vmax 10vmax,
-    -30vmax -10vmax,
-    50vmax 50vmax;
+  background-image: radial-gradient(closest-side, rgba(235, 105, 78, 1), rgba(235, 105, 78, 0)),
+  radial-gradient(closest-side, rgba(243, 11, 164, 1), rgba(243, 11, 164, 0)),
+  radial-gradient(closest-side, rgba(254, 234, 131, 1), rgba(254, 234, 131, 0)),
+  radial-gradient(closest-side, rgba(170, 142, 245, 1), rgba(170, 142, 245, 0)),
+  radial-gradient(closest-side, rgba(248, 192, 147, 1), rgba(248, 192, 147, 0));
+  background-size: 130vmax 130vmax,
+  80vmax 80vmax,
+  90vmax 90vmax,
+  110vmax 110vmax,
+  90vmax 90vmax;
+  background-position: -80vmax -80vmax,
+  60vmax -30vmax,
+  10vmax 10vmax,
+  -30vmax -10vmax,
+  50vmax 50vmax;
   background-repeat: no-repeat;
   animation: 8s movement linear infinite;
   display: flex;
@@ -111,7 +108,7 @@ span {
   font-size: 5rem;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0px 0px 1px rgba(255, 255, 255, .6),
-    0px 4px 4px rgba(0, 0, 0, .05);
+  0px 4px 4px rgba(0, 0, 0, .05);
   letter-spacing: .2rem;
 }
 
@@ -119,63 +116,55 @@ span {
 
   0%,
   100% {
-    background-size:
-      130vmax 130vmax,
-      80vmax 80vmax,
-      90vmax 90vmax,
-      110vmax 110vmax,
-      90vmax 90vmax;
-    background-position:
-      -80vmax -80vmax,
-      60vmax -30vmax,
-      10vmax 10vmax,
-      -30vmax -10vmax,
-      50vmax 50vmax;
+    background-size: 130vmax 130vmax,
+    80vmax 80vmax,
+    90vmax 90vmax,
+    110vmax 110vmax,
+    90vmax 90vmax;
+    background-position: -80vmax -80vmax,
+    60vmax -30vmax,
+    10vmax 10vmax,
+    -30vmax -10vmax,
+    50vmax 50vmax;
   }
 
   25% {
-    background-size:
-      100vmax 100vmax,
-      90vmax 90vmax,
-      100vmax 100vmax,
-      90vmax 90vmax,
-      60vmax 60vmax;
-    background-position:
-      -60vmax -90vmax,
-      50vmax -40vmax,
-      0vmax -20vmax,
-      -40vmax -20vmax,
-      40vmax 60vmax;
+    background-size: 100vmax 100vmax,
+    90vmax 90vmax,
+    100vmax 100vmax,
+    90vmax 90vmax,
+    60vmax 60vmax;
+    background-position: -60vmax -90vmax,
+    50vmax -40vmax,
+    0vmax -20vmax,
+    -40vmax -20vmax,
+    40vmax 60vmax;
   }
 
   50% {
-    background-size:
-      80vmax 80vmax,
-      110vmax 110vmax,
-      80vmax 80vmax,
-      60vmax 60vmax,
-      80vmax 80vmax;
-    background-position:
-      -50vmax -70vmax,
-      40vmax -30vmax,
-      10vmax 0vmax,
-      20vmax 10vmax,
-      30vmax 70vmax;
+    background-size: 80vmax 80vmax,
+    110vmax 110vmax,
+    80vmax 80vmax,
+    60vmax 60vmax,
+    80vmax 80vmax;
+    background-position: -50vmax -70vmax,
+    40vmax -30vmax,
+    10vmax 0vmax,
+    20vmax 10vmax,
+    30vmax 70vmax;
   }
 
   75% {
-    background-size:
-      90vmax 90vmax,
-      90vmax 90vmax,
-      100vmax 100vmax,
-      90vmax 90vmax,
-      70vmax 70vmax;
-    background-position:
-      -50vmax -40vmax,
-      50vmax -30vmax,
-      20vmax 0vmax,
-      -10vmax 10vmax,
-      40vmax 60vmax;
+    background-size: 90vmax 90vmax,
+    90vmax 90vmax,
+    100vmax 100vmax,
+    90vmax 90vmax,
+    70vmax 70vmax;
+    background-position: -50vmax -40vmax,
+    50vmax -30vmax,
+    20vmax 0vmax,
+    -10vmax 10vmax,
+    40vmax 60vmax;
   }
 }
 
