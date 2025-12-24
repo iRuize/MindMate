@@ -25,7 +25,7 @@ public class UserController {
         return result;
     }
 
-    @PostMapping("/userLogin")
+    @PostMapping("/userSmsLogin")
     public Result<Integer> smsLogin(String phoneNumber, String smsCode) {
         return userService.smsLogin(phoneNumber, smsCode);
     }

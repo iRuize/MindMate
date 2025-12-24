@@ -10,7 +10,6 @@
     <packaging>pom</packaging>
 
     <modules>
-        <!--子模块的目录-->
         <module>mindmate-auth</module>
     </modules>
 
@@ -36,12 +35,6 @@
                 <scope>import</scope>
             </dependency>
 
-            <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
-                <version>${mybatis-plus.version}</version>
-            </dependency>
-
             <!-- Spring Cloud Dependencies BOM -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
@@ -51,6 +44,14 @@
                 <scope>import</scope>
             </dependency>
 
+            <!-- Mybatis-plus依赖 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!-- lombok依赖 -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
