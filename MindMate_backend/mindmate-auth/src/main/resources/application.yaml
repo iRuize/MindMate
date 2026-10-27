@@ -1,9 +1,18 @@
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/mindmate?allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: 1234
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 本地达梦 DM8，默认模式 MINDMATE
+    driver-class-name: dm.jdbc.driver.DmDriver
+    url: jdbc:dm://localhost:5236?schema=MINDMATE
+    username: SYSDBA
+    password: Duohereshui1
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # 达梦连接有效性检测
+      connection-test-query: SELECT 1 FROM DUAL
 
   redis:
     host: 127.0.0.1
@@ -11,3 +20,22 @@ spring:
 
 server:
   port: 8080
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      # 达梦自增列（IDENTITY）由数据库生成，对应 IdType.AUTO
+      id-type: auto
+      # 注意：逻辑删除未设为全局配置。SYS_USER 表无 deleted 列，
+      # 若全局启用 logic-delete-field 会给所有查询拼上 deleted=0 导致报错，
+      # 改由 Task 实体上的 @TableLogic 单独声明。
+
+mindmate:
+  auth:
+    # 登录凭证有效期（小时），默认 7 天，每次访问自动续期
+    token-ttl-hours: 168
+    # 伪装短信：验证码是否随响应体回传。接入真实短信服务商后必须改为 false
+    expose-sms-code: true

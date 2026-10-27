@@ -1,12 +1,19 @@
 package ruize.mindmateauth.result;
 
 import lombok.Data;
+import ruize.mindmateauth.enums.ResultCode;
 
+/**
+ * 统一响应体。
+ *
+ * @author 邸睿泽
+ * @since 2026-10-27
+ */
 @Data
 public class Result<T> {
-    private Integer code;    // 状态码，比如200表示成功
-    private String message;  // 返回信息，比如"成功"或者错误描述
-    private T data;          // 具体业务数据
+    private Integer code;
+    private String message;
+    private T data;
 
     public Result() {
     }
@@ -17,8 +24,19 @@ public class Result<T> {
         this.data = data;
     }
 
-    // 返回信息
-    public static <T> Result<T> getResult(int code, String message, T data) {
-        return new Result<>(code, message, data);
+    public static <T> Result<T> success(T data) {
+        return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
+    }
+
+    public static <T> Result<T> success() {
+        return success(null);
+    }
+
+    public static <T> Result<T> fail(ResultCode resultCode) {
+        return new Result<>(resultCode.getCode(), resultCode.getMessage(), null);
+    }
+
+    public static <T> Result<T> fail(int code, String message) {
+        return new Result<>(code, message, null);
     }
 }

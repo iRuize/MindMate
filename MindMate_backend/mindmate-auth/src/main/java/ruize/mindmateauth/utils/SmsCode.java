@@ -1,41 +1,45 @@
 package ruize.mindmateauth.utils;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
-public class SmsCode {
-    /**
-     * 生成6位数字验证码
-     *
-     * @return 6位数字验证码
-     */
-    public static int generateSmsCode() {
-        Random random = new Random();
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < 6; i++) {
-            stringBuilder.append(random.nextInt(10));
-        }
-        // 转换成为整数
-        return Integer.parseInt(stringBuilder.toString());
+/**
+ * 短信验证码工具。
+ *
+ * @author 邸睿泽
+ * @since 2026-10-27
+ */
+public final class SmsCode {
+
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^1[3-9]\\d{9}$");
+
+    private SmsCode() {
     }
 
     /**
-     * @param phoneNumber 手机号码
-     * @return true 表示合法，false 表示不合法
+     * 生成 6 位数字验证码。
+     * 必须返回字符串：以 0 开头的验证码若转成 int 会丢掉前导零，退化为 5 位。
+     *
+     * @return 定长 6 位的数字串
+     */
+    public static String generateSmsCode() {
+        StringBuilder builder = new StringBuilder(6);
+        for (int i = 0; i < 6; i++) {
+            builder.append(ThreadLocalRandom.current().nextInt(10));
+        }
+        return builder.toString();
+    }
+
+    /**
+     * 校验中国大陆手机号。
+     *
+     * @param phoneNumber 手机号
+     * @return true 表示合法
      */
     public static boolean validatePhoneNumber(String phoneNumber) {
         if (phoneNumber == null) {
             return false;
         }
-        // 去除首尾空白字符
-        phoneNumber = phoneNumber.trim();
-
-        // 简单长度判断（中国手机号长度固定为11位）
-        if (phoneNumber.length() != 11) {
-            return false;
-        }
-        // 正则表达式：1开头，第二位数字可能是3-9中的任意一位，后面9位是数字
-        String regex = "^1[3-9]\\d{9}$";
-        return Pattern.matches(regex, phoneNumber);
+        return PHONE_PATTERN.matcher(phoneNumber.trim()).matches();
     }
 }

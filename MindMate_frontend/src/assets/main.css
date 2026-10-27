@@ -1,0 +1,35 @@
+:root {
+  font-size: 15px;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Quicksand', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  color: #1f2430;
+  background-color: #f5f6fa;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input {
+  font: inherit;
+}
