@@ -1,33 +1,46 @@
 -- ===========================================================
--- 达梦数据库 · 新建 MINDMATE 模式与表结构
+-- MindMate 建表脚本（达梦 DM8）
 --
--- 设计依据：SQL/v2_task_model.sql（MySQL 版）的达梦适配
---   1. 快照表 TASK + 事件流 TASK_EVENT 双写，快照负责查询、事件流负责历史
---   2. 行为埋点字段一次建齐（耗时、推迟次数、首次计划日），历史不可回补
---   3. 派生值不入库（紧迫度、四象限由 DUE_AT 在决策时现算）
---   4. 不建物理外键，关联完整性由应用层保证
+-- 本文件是 MINDMATE 模式的权威 DDL，执行后即得到项目所需的全部表结构。
+-- 正文只含 CREATE TABLE / CREATE INDEX / COMMENT ON，
+-- 可在 DIsql、SQLark、DM 管理工具、Navicat 达梦连接等任意客户端直接执行。
 --
--- 相对 MySQL 版的适配点：
---   表名 user -> SYS_USER        USER 是达梦保留字，不加引号无法作为表名，且 MyBatis-Plus
---                                生成的 SQL 不会给表名加引号，故改用非保留字命名
+-- 前置条件：模式 MINDMATE 必须已存在。首次部署时先单独执行一次：
+--
+--     CREATE SCHEMA MINDMATE;
+--
+--   用 DIsql 执行上面这句时，必须在其后另起一行写一个斜杠，
+--   否则 DIsql 不认为语句结束，会把后面的内容全部吞掉：
+--
+--     CREATE SCHEMA MINDMATE;
+--     /
+--
+--   正因这个斜杠在图形化客户端里是语法错误，模式创建没有并入正文，
+--   以保证本文件跨客户端可执行。模式创建只需一次，不必重复。
+--
+-- 设计说明
+--   1. 任务采用「快照表 TASK + 事件流 TASK_EVENT」双写：
+--      快照负责列表查询，事件流负责保留行为历史，两者在同一事务内写入。
+--   2. 行为埋点字段（耗时、推迟次数、首次计划日）必须一次性建齐，
+--      上线后再补则历史数据无法回补，而 AI 决策质量完全依赖历史积累。
+--   3. 派生值不入库：紧迫度、四象限由 DUE_AT 在决策时现算，避免与源字段不同步。
+--   4. 不建物理外键，关联完整性由应用层保证，避免后续分库受阻。
+--
+-- 达梦适配要点（这是达梦语法，不能拿到 MySQL 连接上执行）
+--   表名用 SYS_USER 而非 user：USER 是达梦保留字，未加引号不能作为表名，
+--   而 MyBatis-Plus 生成的 SQL 不会给表名加引号。
 --   AUTO_INCREMENT -> IDENTITY(1,1)
---   去掉 ENGINE / CHARSET 子句     达梦无存储引擎与字符集概念，字符集由实例统一决定
---   JSON -> CLOB                   达梦无原生 JSON 类型，载荷存 CLOB 由应用层序列化
---   ON UPDATE CURRENT_TIMESTAMP    达梦不支持，更新时间由 MyBatis-Plus 自动填充维护
---   DATETIME(3) -> TIMESTAMP(3)    毫秒精度保留
+--   JSON -> CLOB（达梦无原生 JSON 类型，载荷由应用层序列化）
+--   ON UPDATE CURRENT_TIMESTAMP 不支持，更新时间由应用层维护
+--   DATETIME(3) -> TIMESTAMP(3)，毫秒精度保留
 --
--- 执行编码：iconv -f UTF-8 -t GBK
--- 注意：CREATE SCHEMA 必须以 / 终止，见 01 脚本头部说明
+-- 编码：本文件为 UTF-8。若用 DIsql 执行须先转码，否则中文注释会乱码：
+--   iconv -f UTF-8 -t GBK mindmate_schema.sql > /tmp/run.sql
+--   DIsql SYSDBA/密码@localhost:5236 < /tmp/run.sql
 -- ===========================================================
 
 -- -----------------------------------------------------------
--- 第 1 步  新建模式
--- -----------------------------------------------------------
-CREATE SCHEMA MINDMATE;
-/
-
--- -----------------------------------------------------------
--- 第 2 步  用户表
+-- 用户表
 -- -----------------------------------------------------------
 CREATE TABLE "MINDMATE"."SYS_USER"
 (
@@ -39,6 +52,7 @@ CREATE TABLE "MINDMATE"."SYS_USER"
     "EMAIL"                  VARCHAR(100),
     "CREATED_AT"             TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "UPDATED_AT"             TIMESTAMP,
+    "LAST_LOGIN_AT"          TIMESTAMP,
     NOT CLUSTER PRIMARY KEY ("USER_ID"),
     CONSTRAINT "UK_SYS_USER_PHONE" UNIQUE ("PHONE_NUMBER")
 ) STORAGE(ON "MAIN", CLUSTERBTR);
@@ -52,9 +66,10 @@ COMMENT ON COLUMN "MINDMATE"."SYS_USER"."PERSONALIZED_SIGNATURE" IS '个性签�
 COMMENT ON COLUMN "MINDMATE"."SYS_USER"."EMAIL" IS '电子邮箱';
 COMMENT ON COLUMN "MINDMATE"."SYS_USER"."CREATED_AT" IS '创建时间';
 COMMENT ON COLUMN "MINDMATE"."SYS_USER"."UPDATED_AT" IS '更新时间';
+COMMENT ON COLUMN "MINDMATE"."SYS_USER"."LAST_LOGIN_AT" IS '最近登录时间';
 
 -- -----------------------------------------------------------
--- 第 3 步  任务表（当前状态快照）
+-- 任务表（当前状态快照）
 -- -----------------------------------------------------------
 CREATE TABLE "MINDMATE"."TASK"
 (
@@ -105,7 +120,7 @@ CREATE INDEX "IDX_TASK_USER_STATUS_PLAN" ON "MINDMATE"."TASK" ("USER_ID", "STATU
 CREATE INDEX "IDX_TASK_USER_DUE" ON "MINDMATE"."TASK" ("USER_ID", "DUE_AT");
 
 -- -----------------------------------------------------------
--- 第 4 步  任务事件流（不可变，行为历史的唯一事实来源）
+-- 任务事件流（不可变，行为历史的唯一事实来源）
 -- -----------------------------------------------------------
 CREATE TABLE "MINDMATE"."TASK_EVENT"
 (
