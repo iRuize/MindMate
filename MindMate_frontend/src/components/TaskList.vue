@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
+import DatePicker from './DatePicker.vue'
 
 const props = defineProps({
   tasks: { type: Array, required: true },
@@ -110,8 +111,8 @@ const confirmDelete = async (task) => {
         <label class="field full">任务标题 <span class="required">必填</span><input ref="titleInput" v-model="form.title" maxlength="200" required placeholder="下一步，想完成什么？" /></label>
         <label class="field full">任务描述<textarea v-model="form.description" maxlength="5000" rows="3" placeholder="补充说明（选填）" /></label>
         <label class="field full">优先级<select v-model.number="form.priority"><option v-for="(label, value) in priorities" :key="value" :value="value">{{ label }}</option></select></label>
-        <label class="field date-field"><span>计划日期 <small>选填</small></span><input v-model="form.plannedDate" type="date" min="0001-01-01" max="9999-12-31" /><small>安排在哪一天开始</small></label>
-        <label class="field date-field"><span>截止日期 <small>选填</small></span><input v-model="form.dueAt" type="date" min="0001-01-01" max="9999-12-31" /><small>在这一天结束前完成</small></label>
+        <div class="field date-field"><label for="task-planned-date">计划日期 <small>选填</small></label><DatePicker id="task-planned-date" v-model="form.plannedDate" label="计划日期" aria-describedby="task-planned-date-hint" :disabled="disabled" /><small id="task-planned-date-hint">安排在哪一天开始</small></div>
+        <div class="field date-field"><label for="task-due-date">截止日期 <small>选填</small></label><DatePicker id="task-due-date" v-model="form.dueAt" label="截止日期" aria-describedby="task-due-date-hint" :disabled="disabled" /><small id="task-due-date-hint">在这一天结束前完成</small></div>
       </fieldset>
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
       <div class="form-actions"><button type="button" class="button-secondary" :disabled="disabled" @click="closeForm">取消</button><button type="submit" class="button-primary" :disabled="disabled">{{ submitting ? '保存中…' : '保存任务' }}</button></div>
@@ -155,10 +156,7 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -1px; margin: 12px 0; }
 .field input, .field textarea, .field select, .search-actions input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: var(--text); font: inherit; }
 .field textarea { resize: vertical; min-height: 80px; }
 .date-field { padding: 16px; border: 1px solid var(--border); border-radius: 9px; background: #fafcf9; }
-.date-field > span { display: flex; align-items: center; justify-content: space-between; }
-.date-field input { min-height: 44px; color-scheme: light; }
-.date-field input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .6; padding: 4px; }
-.date-field input:focus-visible { outline: 2px solid #a7c5b0; outline-offset: 2px; }
+.date-field > label { display: flex; align-items: center; justify-content: space-between; }
 .field textarea:focus-visible, .field select:focus-visible { outline: 2px solid #a7c5b0; outline-offset: 3px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .form-error { color: #a63a3a; background: #fff5f3; border-radius: 6px; padding: 12px; font-size: 12px; }
