@@ -21,7 +21,7 @@ const formError = ref('')
 const submitting = ref(false)
 const deleteId = ref(null)
 const priorities = ['低', '中', '高', '紧急']
-const blankForm = () => ({ title: '', description: '', priority: 1, plannedDate: '', dueAt: '', estimatedMinutes: '' })
+const blankForm = () => ({ title: '', description: '', priority: 1, plannedDate: '', dueAt: '' })
 const form = ref(blankForm())
 const disabled = computed(() => props.loading || Boolean(props.busy) || submitting.value)
 const counts = computed(() => ({
@@ -48,8 +48,7 @@ const openForm = async (task = null) => {
     description: task.description || '',
     priority: task.priority,
     plannedDate: task.plannedDate || '',
-    dueAt: task.dueAt || '',
-    estimatedMinutes: task.estimatedMinutes ?? '',
+    dueAt: task.dueAt?.slice(0, 10) || '',
   } : blankForm()
   formError.value = ''
   deleteId.value = null
@@ -66,14 +65,9 @@ const submit = async () => {
   if (disabled.value) return
   formError.value = ''
   const title = form.value.title.trim()
-  const minutes = form.value.estimatedMinutes === '' ? null : Number(form.value.estimatedMinutes)
   if (!title) {
     formError.value = '请填写任务标题，不能只输入空格。'
     titleInput.value?.focus()
-    return
-  }
-  if (minutes !== null && (!Number.isInteger(minutes) || minutes < 1 || minutes > 525600)) {
-    formError.value = '预计耗时请填写 1 至 525600 之间的整数分钟，或留空。'
     return
   }
   const data = {
@@ -81,9 +75,9 @@ const submit = async () => {
     description: form.value.description.trim(),
     priority: Number(form.value.priority),
     plannedDate: form.value.plannedDate || null,
-    // 保留本地时间，不通过 UTC 转换改变用户选择的时刻。
-    dueAt: form.value.dueAt ? (form.value.dueAt.length === 16 ? `${form.value.dueAt}:00` : form.value.dueAt.slice(0, 19)) : null,
-    estimatedMinutes: minutes,
+    // 日期按本地当天结束保存，避免当天零点就被判断为逾期。
+    dueAt: form.value.dueAt ? `${form.value.dueAt}T23:59:59` : null,
+    estimatedMinutes: props.tasks.find((task) => task.id === editingId.value)?.estimatedMinutes ?? null,
   }
   submitting.value = true
   try {
@@ -115,10 +109,9 @@ const confirmDelete = async (task) => {
       <fieldset :disabled="disabled">
         <label class="field full">任务标题 <span class="required">必填</span><input ref="titleInput" v-model="form.title" maxlength="200" required placeholder="下一步，想完成什么？" /></label>
         <label class="field full">任务描述<textarea v-model="form.description" maxlength="5000" rows="3" placeholder="补充说明（选填）" /></label>
-        <label class="field">优先级<select v-model.number="form.priority"><option v-for="(label, value) in priorities" :key="value" :value="value">{{ label }}</option></select></label>
-        <label class="field">计划日期<input v-model="form.plannedDate" type="date" min="0001-01-01" max="9999-12-31" /></label>
-        <label class="field">截止时间<input v-model="form.dueAt" type="datetime-local" step="1" min="0001-01-01T00:00:00" max="9999-12-31T23:59:59" /><small>按本地时间保存</small></label>
-        <label class="field">预计耗时（分钟）<input v-model="form.estimatedMinutes" type="number" min="1" max="525600" step="1" placeholder="选填" /></label>
+        <label class="field full">优先级<select v-model.number="form.priority"><option v-for="(label, value) in priorities" :key="value" :value="value">{{ label }}</option></select></label>
+        <label class="field date-field"><span>计划日期 <small>选填</small></span><input v-model="form.plannedDate" type="date" min="0001-01-01" max="9999-12-31" /><small>安排在哪一天开始</small></label>
+        <label class="field date-field"><span>截止日期 <small>选填</small></span><input v-model="form.dueAt" type="date" min="0001-01-01" max="9999-12-31" /><small>在这一天结束前完成</small></label>
       </fieldset>
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
       <div class="form-actions"><button type="button" class="button-secondary" :disabled="disabled" @click="closeForm">取消</button><button type="submit" class="button-primary" :disabled="disabled">{{ submitting ? '保存中…' : '保存任务' }}</button></div>
@@ -134,7 +127,7 @@ const confirmDelete = async (task) => {
         <li v-for="task in visibleTasks" :key="task.id" class="task-row" :class="{ completed: task.status === 2 }">
           <div class="task-main">
             <button class="status-toggle" :class="{ checked: task.status === 2 }" :disabled="disabled" :aria-label="`${task.status === 2 ? '重开' : '完成'}任务：${task.title}`" :aria-pressed="task.status === 2" @click="changeStatus(task)">{{ busy === `status:${task.id}` ? '…' : task.status === 2 ? '✓' : '' }}</button>
-            <div class="task-detail"><h2>{{ task.title }}</h2><p v-if="task.description" class="description">{{ task.description }}</p><div class="task-meta"><span class="priority" :class="`priority-${task.priority}`">{{ priorities[task.priority] }}优先级</span><span>{{ task.status === 2 ? '已完成' : '待办' }}</span><span v-if="task.plannedDate">计划 {{ task.plannedDate }}</span><span v-if="task.dueAt" :class="{ overdue: isOverdue(task) }">{{ isOverdue(task) ? '已逾期 · ' : '截止 ' }}{{ displayTime(task.dueAt) }}</span><span v-if="task.estimatedMinutes != null">预计 {{ task.estimatedMinutes }} 分钟</span><span v-if="task.status === 2 && task.completedAt">完成于 {{ displayTime(task.completedAt) }}</span></div></div>
+            <div class="task-detail"><h2>{{ task.title }}</h2><p v-if="task.description" class="description">{{ task.description }}</p><div class="task-meta"><span class="priority" :class="`priority-${task.priority}`">{{ priorities[task.priority] }}优先级</span><span>{{ task.status === 2 ? '已完成' : '待办' }}</span><span v-if="task.plannedDate">计划 {{ task.plannedDate }}</span><span v-if="task.dueAt" :class="{ overdue: isOverdue(task) }">{{ isOverdue(task) ? '已逾期 · ' : '截止 ' }}{{ task.dueAt.slice(0, 10) }}</span><span v-if="task.status === 2 && task.completedAt">完成于 {{ displayTime(task.completedAt) }}</span></div></div>
           </div>
           <div class="row-actions"><button :disabled="disabled" @click="openForm(task)">编辑</button><button class="delete-action" :disabled="disabled" @click="deleteId = task.id">删除</button></div>
           <div v-if="deleteId === task.id" class="delete-confirm" role="group" :aria-label="`确认删除任务：${task.title}`"><span>确定删除这项任务？删除后无法恢复。</span><div><button :disabled="disabled" @click="deleteId = null">取消</button><button class="delete-action" :disabled="disabled" @click="confirmDelete(task)">{{ busy === `delete:${task.id}` ? '删除中…' : '确认删除' }}</button></div></div>
@@ -161,6 +154,11 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -1px; margin: 12px 0; }
 .required, .field small { font-size: 10px; color: var(--text-muted); }
 .field input, .field textarea, .field select, .search-actions input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: var(--text); font: inherit; }
 .field textarea { resize: vertical; min-height: 80px; }
+.date-field { padding: 16px; border: 1px solid var(--border); border-radius: 9px; background: #fafcf9; }
+.date-field > span { display: flex; align-items: center; justify-content: space-between; }
+.date-field input { min-height: 44px; color-scheme: light; }
+.date-field input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .6; padding: 4px; }
+.date-field input:focus-visible { outline: 2px solid #a7c5b0; outline-offset: 2px; }
 .field textarea:focus-visible, .field select:focus-visible { outline: 2px solid #a7c5b0; outline-offset: 3px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .form-error { color: #a63a3a; background: #fff5f3; border-radius: 6px; padding: 12px; font-size: 12px; }
