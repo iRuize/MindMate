@@ -24,6 +24,9 @@ public enum ResultCode {
     SMSCODE_WRONG(1005, "验证码错误"),
     SMSCODE_ATTEMPT_LIMIT(1006, "验证码错误次数过多，请重新获取"),
     USER_NOT_FOUND(1007, "用户不存在，请先获取验证码"),
+    TASK_NOT_FOUND(2001, "任务不存在或已删除"),
+    TASK_STATUS_INVALID(2002, "任务状态只能为0或2"),
+    TASK_WRITE_FAILED(2003, "任务保存失败，请稍后再试"),
     SERVER_ERROR(1500, "服务器内部错误");
 
     private final int code;

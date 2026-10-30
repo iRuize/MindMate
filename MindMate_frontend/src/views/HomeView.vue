@@ -1,8 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { avatarAddress, fetchMe, logout, updateMe, uploadAvatar } from '@/api/auth'
 import { TOKEN_KEY } from '@/api/request'
+import { createTask, deleteTask, fetchTasks, updateTask, updateTaskStatus } from '@/api/tasks'
+import TaskList from '@/components/TaskList.vue'
 
 const router = useRouter()
 const user = ref(null)
@@ -11,6 +13,88 @@ const errorMessage = ref('')
 const loggingOut = ref(false)
 const activeView = ref('overview')
 const notice = ref('')
+const tasks = ref([])
+const taskList = ref(null)
+const openTodayTask = (task) => {
+  taskList.value?.showTask(task)
+  activeView.value = 'tasks'
+}
+const tasksLoading = ref(false)
+const tasksLoaded = ref(false)
+const taskLoadError = ref('')
+const taskActionError = ref('')
+const taskBusy = ref('')
+const taskMessage = ref('')
+const now = ref(new Date())
+const localDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const today = computed(() => localDate(now.value))
+const isOverdue = (task) => task.status !== 2 && task.dueAt && new Date(task.dueAt).getTime() < now.value.getTime()
+const todayTasks = computed(() => tasks.value.filter((task) => task.status !== 2 && (
+  task.plannedDate === today.value || task.dueAt?.slice(0, 10) === today.value || isOverdue(task)
+)).sort((a, b) => Number(Boolean(isOverdue(b))) - Number(Boolean(isOverdue(a))) || b.priority - a.priority || (a.dueAt || '9999').localeCompare(b.dueAt || '9999')))
+const weeklyCompleted = computed(() => {
+  const monday = new Date(now.value)
+  monday.setHours(0, 0, 0, 0)
+  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7)
+  return tasks.value.filter((task) => {
+    if (task.status !== 2 || !task.completedAt) return false
+    const completed = new Date(task.completedAt)
+    return completed >= monday && completed <= now.value
+  }).length
+})
+const reloadTasks = async () => {
+  if (tasksLoading.value || taskBusy.value) return
+  tasksLoading.value = true
+  taskLoadError.value = ''
+  now.value = new Date()
+  try {
+    tasks.value = await fetchTasks()
+    tasksLoaded.value = true
+  } catch (error) {
+    taskLoadError.value = `${tasksLoaded.value ? '任务刷新失败，当前保留上次成功的数据' : '任务加载失败'}：${error.message || '请稍后重试'}`
+  } finally { tasksLoading.value = false }
+}
+const runTaskAction = async (key, action, message) => {
+  if (taskBusy.value || tasksLoading.value) return false
+  taskBusy.value = key
+  taskActionError.value = ''
+  taskMessage.value = ''
+  let succeeded = false
+  try {
+    await action()
+    now.value = new Date()
+    taskMessage.value = message
+    succeeded = true
+  } catch (error) {
+    taskActionError.value = `操作失败：${error.message || '请稍后重试'}。请在原操作处重试。`
+  } finally { taskBusy.value = '' }
+  // 先同步成功响应，再刷新；刷新失败也保留已保存的结果。
+  if (succeeded) await reloadTasks()
+  return succeeded
+}
+const saveTask = (id, data) => runTaskAction(id === null ? 'create' : `save:${id}`, async () => {
+  const saved = id === null ? await createTask(data) : await updateTask(id, data)
+  const index = tasks.value.findIndex((task) => task.id === saved.id)
+  if (index === -1) tasks.value.unshift(saved)
+  else tasks.value.splice(index, 1, saved)
+}, '任务已保存')
+const changeTaskStatus = (task) => runTaskAction(`status:${task.id}`, async () => {
+  const saved = await updateTaskStatus(task.id, task.status === 2 ? 0 : 2)
+  const index = tasks.value.findIndex((item) => item.id === saved.id)
+  if (index !== -1) tasks.value.splice(index, 1, saved)
+}, task.status === 2 ? '任务已重开' : '任务已完成')
+const removeTask = (id) => runTaskAction(`delete:${id}`, async () => {
+  await deleteTask(id)
+  tasks.value = tasks.value.filter((task) => task.id !== id)
+}, '任务已删除')
+const refreshOnFocus = () => {
+  now.value = new Date()
+  if (activeView.value === 'overview' || activeView.value === 'tasks') void reloadTasks()
+}
+watch(activeView, (view) => {
+  if (view === 'overview' || view === 'tasks') void reloadTasks()
+})
+let clockTimer
 const views = [
   { id: 'overview', icon: '◫', label: '我的工作台' },
   { id: 'tasks', icon: '☷', label: '任务清单' },
@@ -66,8 +150,8 @@ const handleAvatar = async (event) => {
   finally { uploading.value = false }
 }
 const maskedPhone = computed(() => user.value?.phoneNumber?.replace(/^(\d{3})\d{4}(\d{4})$/, '$1 **** $2') || '个人空间')
-const dateLabel = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date())
-const greeting = new Date().getHours() < 12 ? '上午好' : new Date().getHours() < 18 ? '下午好' : '晚上好'
+const dateLabel = computed(() => new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(now.value))
+const greeting = computed(() => now.value.getHours() < 12 ? '上午好' : now.value.getHours() < 18 ? '下午好' : '晚上好')
 const formatDateTime = (value) => value ? String(value).replace('T', ' ').slice(0, 16) : '未设置'
 const showNotice = (message) => { notice.value = message }
 const loadUser = async () => {
@@ -92,7 +176,16 @@ const handleLogout = async () => {
   } catch (error) { errorMessage.value = error.message || '退出失败，请重试' }
   finally { loggingOut.value = false }
 }
-onMounted(loadUser)
+onMounted(() => {
+  void loadUser()
+  void reloadTasks()
+  window.addEventListener('focus', refreshOnFocus)
+  clockTimer = window.setInterval(() => { now.value = new Date() }, 60000)
+})
+onUnmounted(() => {
+  window.removeEventListener('focus', refreshOnFocus)
+  window.clearInterval(clockTimer)
+})
 </script>
 
 <template>
@@ -108,14 +201,20 @@ onMounted(loadUser)
       <main class="content">
         <div v-if="errorMessage" class="feedback error" role="alert">{{ errorMessage }}<button @click="loadUser">重新加载</button></div>
         <div v-if="notice" class="feedback" role="status">{{ notice }}<button aria-label="关闭提示" @click="notice = ''">×</button></div>
+        <template v-if="activeView === 'overview' || activeView === 'tasks'">
+          <div v-if="taskLoadError" class="feedback error" role="alert"><span>{{ taskLoadError }}</span><button :disabled="tasksLoading || Boolean(taskBusy)" @click="reloadTasks">{{ tasksLoading ? '重试中…' : '重新加载' }}</button></div>
+          <div v-if="taskActionError" class="feedback error" role="alert"><span>{{ taskActionError }}</span><button aria-label="关闭任务操作错误" @click="taskActionError = ''">×</button></div>
+          <div v-if="taskMessage" class="feedback" role="status"><span>{{ taskMessage }}</span><button aria-label="关闭任务提示" @click="taskMessage = ''">×</button></div>
+        </template>
         <template v-if="activeView === 'overview'">
           <section class="welcome"><div><span class="eyebrow">{{ dateLabel }}</span><h1>{{ greeting }}，{{ name }}<span class="greeting-dot">。</span></h1><p>把纷繁留在外面，在这里找到今天的方向。</p></div><span class="welcome-stamp">ONE THING AT A TIME</span></section>
           <section class="focus-banner"><div><span class="eyebrow">A LITTLE CLARITY, EVERY DAY</span><h2>先理清思路，再迈出下一步。</h2><p>记录值得做的事，留意真正重要的选择。</p><button class="button-primary" @click="activeView = 'tasks'">整理我的清单 <span aria-hidden="true">↗</span></button></div><div class="focus-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-center">m<span>·</span></div><span class="art-point point-one"></span><span class="art-point point-two"></span><span class="art-caption">THINK CLEAR. MOVE FORWARD.</span></div></section>
-          <section class="summary-grid" aria-label="工作台概览"><div class="summary-card"><span>今日待办</span><strong>—<small>件</small></strong><p>从一份清晰的清单开始</p></div><div class="summary-card"><span>等待思考的决定</span><strong>—<small>个</small></strong><p>为重要的选择留出空间</p></div><div class="summary-card"><span>本周已完成</span><strong>—<small>件</small></strong><p>让每一点进展都被看见</p></div></section>
-          <div class="dashboard-grid"><section class="panel today-panel"><div class="section-heading"><h2>今日清单</h2><button class="text-action" @click="activeView = 'tasks'">查看全部 <span aria-hidden="true">↗</span></button></div><div class="empty-state"><div class="empty-symbol" aria-hidden="true">☷</div><h3>给今天，留一个清晰的开始</h3><p>这里将收纳你的待办、计划与进展。<br />任务清单即将开放，先从想清楚一件事开始。</p><span class="status-pill">即将开放</span></div><div class="panel-footer"><span class="tiny-dot"></span>不必填满每一天，重要的是知道先做什么。</div></section><section class="panel companion-panel"><div class="section-heading"><h2>你的决策伙伴</h2><span class="ai-tag">AI · 筹备中</span></div><p class="companion-intro">当选择变得复杂，<br />试着把问题拆得简单一点。</p><div class="prompt-list"><button @click="showNotice('AI 决策功能正在筹备中，后续将结合你的任务与目标提供建议。')"><span>01</span>今天，我应该先做什么？<span>↗</span></button><button @click="showNotice('决策空间即将开放，后续可以在这里梳理选项、收益与代价。')"><span>02</span>这两个选择，该如何取舍？<span>↗</span></button><button @click="showNotice('行动拆解功能正在筹备中，后续将帮助你把目标变成可执行的步骤。')"><span>03</span>如何把目标变成下一步？<span>↗</span></button></div><p class="companion-note">帮你梳理思路，决定始终由你做。</p></section></div>
+          <section class="summary-grid" aria-label="工作台概览"><div class="summary-card"><span>今日待办</span><strong>{{ tasksLoaded ? todayTasks.length : '—' }}<small>件</small></strong><p>今日计划与截止，含逾期待办</p></div><div class="summary-card"><span>等待思考的决定</span><strong>—<small>个</small></strong><p>为重要的选择留出空间</p></div><div class="summary-card"><span>本周已完成</span><strong>{{ tasksLoaded ? weeklyCompleted : '—' }}<small>件</small></strong><p>从本地周一零点起，记录每一点进展</p></div></section>
+          <div class="dashboard-grid"><section class="panel today-panel"><div class="section-heading"><h2>今日清单</h2><button class="text-action" @click="activeView = 'tasks'">查看全部 <span aria-hidden="true">↗</span></button></div><p v-if="tasksLoading" class="today-loading" role="status">{{ tasksLoaded ? '正在刷新今日任务…' : '正在加载今日任务…' }}</p><ul v-if="tasksLoaded && todayTasks.length" class="today-list"><li v-for="task in todayTasks.slice(0, 5)" :key="task.id"><button class="today-task-link" @click="openTodayTask(task)"><strong>{{ task.title }}</strong><span :class="{ overdue: isOverdue(task) }">{{ isOverdue(task) ? `已逾期 · ${formatDateTime(task.dueAt)}` : task.dueAt ? `截止 ${formatDateTime(task.dueAt)}` : '计划今天' }}</span></button><button class="text-action" @click="openTodayTask(task)">前往处理 ↗</button></li></ul><div v-else-if="!tasksLoading && tasksLoaded" class="empty-state"><div class="empty-symbol" aria-hidden="true">☷</div><h3>今天的清单很轻盈</h3><p>没有今日计划、今日截止或逾期的待办。<br />去清单里，安排下一件值得做的事。</p><button class="button-secondary" @click="activeView = 'tasks'">安排任务</button></div><p v-else-if="!tasksLoading" class="today-loading">今日任务暂不可用，请点击上方“重新加载”。</p><p v-if="tasksLoaded && todayTasks.length > 5" class="today-more">还有 {{ todayTasks.length - 5 }} 项待办，可前往任务清单查看。</p><div class="panel-footer"><span class="tiny-dot"></span>不必填满每一天，重要的是知道先做什么。</div></section><section class="panel companion-panel"><div class="section-heading"><h2>你的决策伙伴</h2><span class="ai-tag">AI · 筹备中</span></div><p class="companion-intro">当选择变得复杂，<br />试着把问题拆得简单一点。</p><div class="prompt-list"><button @click="showNotice('AI 决策功能正在筹备中，后续将结合你的任务与目标提供建议。')"><span>01</span>今天，我应该先做什么？<span>↗</span></button><button @click="showNotice('决策空间即将开放，后续可以在这里梳理选项、收益与代价。')"><span>02</span>这两个选择，该如何取舍？<span>↗</span></button><button @click="showNotice('行动拆解功能正在筹备中，后续将帮助你把目标变成可执行的步骤。')"><span>03</span>如何把目标变成下一步？<span>↗</span></button></div><p class="companion-note">帮你梳理思路，决定始终由你做。</p></section></div>
           <footer class="content-footer"><span>MindMate · 每一次决定，都会有帮助</span><span>留一点空间，给更好的答案。</span></footer>
         </template>
-        <section v-else-if="activeView === 'account'" class="account-view">
+        <TaskList ref="taskList" v-show="activeView === 'tasks'" :tasks="tasks" :loading="tasksLoading" :loaded="tasksLoaded" :busy="taskBusy" :now="now" :save-task="saveTask" :change-status="changeTaskStatus" :remove-task="removeTask" @refresh="reloadTasks" />
+        <section v-if="activeView === 'account'" class="account-view">
           <span class="eyebrow">YOUR PERSONAL SPACE</span><h1>个人信息</h1><p class="page-description">让你的个人空间，多一点自己的样子。</p>
           <div class="panel profile-panel">
             <p v-if="loading">正在加载账号信息…</p>
@@ -138,7 +237,7 @@ onMounted(loadUser)
             <p v-else class="page-description">账号信息暂时无法加载，请点击上方“重新加载”。</p>
           </div>
         </section>
-        <section v-else class="module-view"><span class="eyebrow">MAKE ROOM FOR WHAT MATTERS</span><h1>{{ currentTitle }}</h1><p class="page-description">{{ activeView === 'tasks' ? '把想做的事，整理成可以迈出的下一步。' : activeView === 'decisions' ? '把选项、顾虑与期待放在一起，让选择更清晰。' : '回头看看走过的路，为下一次选择积累经验。' }}</p><div class="panel module-placeholder"><span class="empty-symbol" aria-hidden="true">{{ activeView === 'tasks' ? '☷' : activeView === 'decisions' ? '◇' : '↺' }}</span><h2>{{ currentTitle }}，即将开放</h2><p>这个空间已为你预留，更多能力正在准备中。</p><button class="button-secondary" @click="activeView = 'overview'">返回工作台</button></div></section>
+        <section v-else-if="activeView === 'decisions' || activeView === 'review'" class="module-view"><span class="eyebrow">MAKE ROOM FOR WHAT MATTERS</span><h1>{{ currentTitle }}</h1><p class="page-description">{{ activeView === 'decisions' ? '把选项、顾虑与期待放在一起，让选择更清晰。' : '回头看看走过的路，为下一次选择积累经验。' }}</p><div class="panel module-placeholder"><span class="empty-symbol" aria-hidden="true">{{ activeView === 'decisions' ? '◇' : '↺' }}</span><h2>{{ currentTitle }}，即将开放</h2><p>这个空间已为你预留，更多能力正在准备中。</p><button class="button-secondary" @click="activeView = 'overview'">返回工作台</button></div></section>
       </main>
     </div>
   </div>
@@ -157,6 +256,15 @@ onMounted(loadUser)
 .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }.summary-card { border: 1px solid var(--border); border-radius: 10px; padding: 20px 23px; background: #fff; }.summary-card > span { font-size: 11px; color: var(--text-secondary); }.summary-card strong { display: block; font-size: 29px; font-weight: 500; margin: 10px 0; color: #526456; }.summary-card small { font-size: 10px; margin-left: 9px; font-weight: 400; color: var(--text-muted); }.summary-card p { color: var(--text-muted); font-size: 10px; margin: 0; }
 .dashboard-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }.panel { border: 1px solid var(--border); border-radius: 10px; background: #fff; }.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.section-heading h2 { font-size: 14px; font-weight: 600; margin: 0; }.today-panel { padding: 23px 24px 0; }.empty-state { text-align: center; padding: 28px 0 24px; }.empty-symbol { font-size: 26px; color: #8ca592; background: #f2f6f1; width: 50px; height: 50px; border-radius: 13px; display: inline-grid; place-items: center; }.empty-state h3 { font-size: 13px; font-weight: 500; margin: 17px 0 10px; }.empty-state p, .module-placeholder p { font-size: 11px; color: var(--text-muted); line-height: 1.9; }.status-pill { display: inline-block; font-size: 9px; background: #f5f6f3; color: #8b9789; border-radius: 4px; padding: 5px 10px; margin-top: 7px; }.panel-footer { border-top: 1px solid #eff2ed; padding: 14px 0; font-size: 9px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }.companion-panel { padding: 23px 24px; }.companion-intro { font-size: 19px; line-height: 1.7; color: #526b59; margin: 24px 0 17px; letter-spacing: -.4px; }.prompt-list { display: flex; flex-direction: column; }.prompt-list button { display: flex; align-items: center; gap: 10px; padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid #eff2ed; color: var(--text-secondary); font-size: 11px; text-align: left; }.prompt-list button:hover { color: var(--accent); }.prompt-list button span:first-child { font-size: 9px; color: #a4b2a5; }.prompt-list button span:last-child { margin-left: auto; color: #9aaa9b; }.companion-note { font-size: 9px; color: var(--text-muted); margin: 18px 0 0; }.content-footer { display: flex; justify-content: space-between; gap: 15px; color: #9aa69b; font-size: 9px; padding-top: 25px; }
 .feedback { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 16px; margin-bottom: 20px; border: 1px solid #d7e5d9; background: #eff7f0; border-radius: 7px; color: #41624a; font-size: 12px; line-height: 1.7; }.feedback button { border: 0; background: transparent; color: inherit; white-space: nowrap; }.feedback.error { color: #a63a3a; background: #fff5f3; border-color: #f1ddd7; }.profile-panel { padding: 28px; margin-top: 28px; }.profile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin: 0; }.profile dt { font-size: 11px; color: var(--text-muted); margin-bottom: 9px; }.profile dd { font-size: 14px; margin: 0; overflow-wrap: anywhere; }.module-placeholder { margin-top: 28px; min-height: 360px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }.module-placeholder h2 { font-size: 19px; font-weight: 500; margin: 22px 0 0; }.module-placeholder .button-secondary { margin-top: 18px; }
+.today-loading, .today-more { color: var(--text-secondary); font-size: 11px; line-height: 1.8; padding: 16px 0; margin: 0; }
+.today-list { list-style: none; padding: 8px 0; margin: 0; }
+.today-list li { display: flex; align-items: center; gap: 14px; padding: 15px 0; border-bottom: 1px solid #eff2ed; }
+.today-list li:last-child { border-bottom: 0; }
+.today-task-link { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; padding: 0; color: var(--text); }
+.today-task-link strong { display: block; font-size: 13px; line-height: 1.7; font-weight: 500; overflow-wrap: anywhere; }
+.today-task-link span { display: block; font-size: 10px; color: var(--text-secondary); margin-top: 5px; }
+.today-task-link .overdue { color: #ae5141; }
+.today-list .text-action { flex-shrink: 0; color: var(--accent); }
 .avatar { flex-shrink: 0; overflow: hidden; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-editor { display: flex; gap: 24px; align-items: center; padding-bottom: 26px; border-bottom: 1px solid var(--border); }
