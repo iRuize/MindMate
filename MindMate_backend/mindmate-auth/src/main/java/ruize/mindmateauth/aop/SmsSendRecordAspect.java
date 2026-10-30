@@ -32,7 +32,7 @@ public class SmsSendRecordAspect {
         // TODO将用户发送验证码时间以及IP地址写入数据库
         System.out.println("IP: " + ip);
         System.out.println("发送时间: " + time);
-        // 将发送信息写入到Mysql
+        // 将发送信息写入到达梦数据库
         // proceed()执行目标方法（必须调用，否则原方法不执行），result是原方法的返回值
         Object result = joinPoint.proceed();
         // 在方法执行后输出

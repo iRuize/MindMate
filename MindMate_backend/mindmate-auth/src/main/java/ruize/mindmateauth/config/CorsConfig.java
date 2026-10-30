@@ -15,7 +15,10 @@ public class CorsConfig {
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins("http://localhost:5173") // 前端地址
-                        .allowedMethods("GET", "POST", "PUT", "DELETE")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        // 登录后请求需携带 Authorization，必须显式放行该头，否则预检被拒
+                        .allowedHeaders("*")
+                        .exposedHeaders("Authorization")
                         .allowCredentials(true);
             }
         };
