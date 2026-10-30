@@ -1,17 +1,23 @@
 package ruize.mindmateauth.controller;
 
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import ruize.mindmateauth.context.UserContext;
 import ruize.mindmateauth.dto.LoginRequest;
 import ruize.mindmateauth.dto.LoginResponse;
+import ruize.mindmateauth.dto.UpdateProfileRequest;
 import ruize.mindmateauth.dto.UserVO;
 import ruize.mindmateauth.result.Result;
 import ruize.mindmateauth.service.UserService;
+
+import javax.validation.Valid;
 
 /**
  * 认证接口。
@@ -52,6 +58,22 @@ public class UserController {
     @GetMapping("/me")
     public Result<UserVO> me() {
         return Result.success(userService.getCurrentUser(UserContext.getUserId()));
+    }
+
+    /**
+     * 编辑当前用户资料，空值或空白字符串清空对应字段。
+     */
+    @PutMapping("/me")
+    public Result<UserVO> updateMe(@Valid @RequestBody UpdateProfileRequest request) {
+        return Result.success(userService.updateProfile(UserContext.getUserId(), request));
+    }
+
+    /**
+     * 上传当前用户头像，表单字段名为 file。
+     */
+    @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<UserVO> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        return Result.success(userService.uploadAvatar(UserContext.getUserId(), file));
     }
 
     /**

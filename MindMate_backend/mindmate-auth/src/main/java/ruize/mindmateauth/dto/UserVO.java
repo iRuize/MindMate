@@ -16,7 +16,7 @@ public class UserVO {
     private Long userId;
     private String phoneNumber;
     private String username;
-    private String realName;
+    private String avatarUrl;
     private String personalizedSignature;
     private String email;
     private LocalDateTime lastLoginAt;
@@ -26,7 +26,7 @@ public class UserVO {
         vo.setUserId(user.getUserId());
         vo.setPhoneNumber(user.getPhoneNumber());
         vo.setUsername(user.getUsername());
-        vo.setRealName(user.getRealName());
+        vo.setAvatarUrl(user.getAvatarUrl());
         vo.setPersonalizedSignature(user.getPersonalizedSignature());
         vo.setEmail(user.getEmail());
         vo.setLastLoginAt(user.getLastLoginAt());

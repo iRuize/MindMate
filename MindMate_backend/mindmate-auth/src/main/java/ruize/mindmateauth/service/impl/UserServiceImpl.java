@@ -1,22 +1,30 @@
 package ruize.mindmateauth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import ruize.mindmateauth.aop.SmsSendRecord;
 import ruize.mindmateauth.config.AuthProperties;
 import ruize.mindmateauth.constant.RedisKeys;
 import ruize.mindmateauth.dto.LoginResponse;
+import ruize.mindmateauth.dto.UpdateProfileRequest;
 import ruize.mindmateauth.dto.UserVO;
 import ruize.mindmateauth.entity.User;
 import ruize.mindmateauth.enums.ResultCode;
 import ruize.mindmateauth.exception.BizException;
 import ruize.mindmateauth.mapper.UserMapper;
+import ruize.mindmateauth.service.AvatarStorage;
 import ruize.mindmateauth.service.UserService;
 import ruize.mindmateauth.utils.SmsCode;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,12 +52,14 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final AuthProperties authProperties;
+    private final AvatarStorage avatarStorage;
 
     public UserServiceImpl(UserMapper userMapper, StringRedisTemplate stringRedisTemplate,
-                           AuthProperties authProperties) {
+                           AuthProperties authProperties, AvatarStorage avatarStorage) {
         this.userMapper = userMapper;
         this.stringRedisTemplate = stringRedisTemplate;
         this.authProperties = authProperties;
+        this.avatarStorage = avatarStorage;
     }
 
     @Override
@@ -150,6 +160,56 @@ public class UserServiceImpl implements UserService {
             throw new BizException(ResultCode.USER_NOT_FOUND);
         }
         return UserVO.from(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserVO updateProfile(Long userId, UpdateProfileRequest request) {
+        getCurrentUser(userId);
+        // 显式 set 才能将空值写入数据库，不受 MyBatis-Plus 默认忽略 null 的策略影响。
+        int updated = userMapper.update(null, new LambdaUpdateWrapper<User>()
+                .eq(User::getUserId, userId)
+                .set(User::getUsername, normalizeProfileValue(request.getUsername()))
+                .set(User::getEmail, normalizeProfileValue(request.getEmail()))
+                .set(User::getPersonalizedSignature, normalizeProfileValue(request.getPersonalizedSignature()))
+                .set(User::getUpdatedAt, LocalDateTime.now()));
+        if (updated != 1) {
+            throw new BizException(ResultCode.USER_NOT_FOUND);
+        }
+        return getCurrentUser(userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserVO uploadAvatar(Long userId, MultipartFile file) {
+        getCurrentUser(userId);
+        Path newFile = avatarStorage.store(file);
+        try {
+            // 在事务真正完成后决定是否清理，覆盖方法返回后提交失败的情况。
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) {
+                        avatarStorage.deleteNewFile(newFile);
+                    }
+                }
+            });
+            int updated = userMapper.update(null, new LambdaUpdateWrapper<User>()
+                    .eq(User::getUserId, userId)
+                    .set(User::getAvatarUrl, "/avatars/" + newFile.getFileName())
+                    .set(User::getUpdatedAt, LocalDateTime.now()));
+            if (updated != 1) {
+                throw new BizException(ResultCode.USER_NOT_FOUND);
+            }
+            return getCurrentUser(userId);
+        } catch (RuntimeException | Error e) {
+            avatarStorage.deleteNewFile(newFile);
+            throw e;
+        }
+    }
+
+    private String normalizeProfileValue(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     @Override

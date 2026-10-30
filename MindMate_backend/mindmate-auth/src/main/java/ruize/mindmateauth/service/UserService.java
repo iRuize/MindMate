@@ -1,6 +1,8 @@
 package ruize.mindmateauth.service;
 
+import org.springframework.web.multipart.MultipartFile;
 import ruize.mindmateauth.dto.LoginResponse;
+import ruize.mindmateauth.dto.UpdateProfileRequest;
 import ruize.mindmateauth.dto.UserVO;
 
 /**
@@ -28,6 +30,16 @@ public interface UserService {
      * 查询当前登录用户信息。
      */
     UserVO getCurrentUser(Long userId);
+
+    /**
+     * 更新当前用户资料，空值或空白字符串清空对应字段。
+     */
+    UserVO updateProfile(Long userId, UpdateProfileRequest request);
+
+    /**
+     * 上传头像并更新当前用户的公开头像路径。
+     */
+    UserVO uploadAvatar(Long userId, MultipartFile file);
 
     /**
      * 退出登录，使凭证立即失效。

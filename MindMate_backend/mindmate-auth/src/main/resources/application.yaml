@@ -1,4 +1,9 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      # 为 multipart 边界和表单头预留空间，文件本身仍限制为 2MB
+      max-request-size: 3MB
   datasource:
     # 本地达梦 DM8，默认模式 MINDMATE
     driver-class-name: dm.jdbc.driver.DmDriver
@@ -34,6 +39,9 @@ mybatis-plus:
       # 改由 Task 实体上的 @TableLogic 单独声明。
 
 mindmate:
+  avatar:
+    # 相对路径基于后端进程工作目录，可通过环境变量指定持久化目录
+    directory: ${MINDMATE_AVATAR_DIRECTORY:./uploads/avatars}
   auth:
     # 登录凭证有效期（小时），默认 7 天，每次访问自动续期
     token-ttl-hours: 168

@@ -11,5 +11,18 @@ export const login = (phoneNumber, smsCode) =>
 /** 查询当前登录用户 */
 export const fetchMe = () => request.get('/auth/me')
 
+/** 编辑当前用户资料 */
+export const updateMe = (data) => request.put('/auth/me', data)
+
+/** 上传并保存头像 */
+export const uploadAvatar = (file) => {
+  const data = new FormData()
+  data.append('file', file)
+  return request.post('/auth/avatar', data)
+}
+
+/** 将服务端头像路径转换为可展示地址 */
+export const avatarAddress = (path) => path ? new URL(path, request.defaults.baseURL).href : ''
+
 /** 退出登录，服务端销毁凭证 */
 export const logout = () => request.post('/auth/logout')

@@ -30,7 +30,7 @@ public class User {
 
     private String phoneNumber;
     private String username;
-    private String realName;
+    private String avatarUrl;
     private String personalizedSignature;
     private String email;
 

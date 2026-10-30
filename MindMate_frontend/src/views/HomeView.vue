@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchMe, logout } from '@/api/auth'
+import { avatarAddress, fetchMe, logout, updateMe, uploadAvatar } from '@/api/auth'
 import { TOKEN_KEY } from '@/api/request'
 
 const router = useRouter()
@@ -18,21 +18,66 @@ const views = [
   { id: 'review', icon: '↺', label: '回顾与洞察' },
 ]
 const currentTitle = computed(() => views.find((item) => item.id === activeView.value)?.label || '个人账号')
-const name = computed(() => user.value?.username || user.value?.realName || '朋友')
+const name = computed(() => user.value?.username || '朋友')
+const form = ref({ username: '', email: '', personalizedSignature: '' })
+const saving = ref(false)
+const uploading = ref(false)
+const avatarFailed = ref(false)
+const fileInput = ref(null)
+const profileError = ref('')
+const profileMessage = ref('')
+const avatarUrl = computed(() => avatarFailed.value ? '' : avatarAddress(user.value?.avatarUrl))
+const syncForm = () => {
+  form.value = {
+    username: user.value?.username || '',
+    email: user.value?.email || '',
+    personalizedSignature: user.value?.personalizedSignature || '',
+  }
+}
+const saveProfile = async () => {
+  if (saving.value || uploading.value) return
+  saving.value = true
+  profileError.value = ''
+  profileMessage.value = ''
+  try {
+    user.value = await updateMe({ ...form.value })
+    syncForm()
+    profileMessage.value = '个人信息已保存'
+  } catch (error) { profileError.value = error.message }
+  finally { saving.value = false }
+}
+const handleAvatar = async (event) => {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file || uploading.value || saving.value) return
+  profileError.value = ''
+  profileMessage.value = ''
+  if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+    profileError.value = '请选择不超过 2MB 的 JPG 或 PNG 图片'
+    return
+  }
+  uploading.value = true
+  try {
+    const updatedUser = await uploadAvatar(file)
+    user.value = { ...user.value, avatarUrl: updatedUser.avatarUrl }
+    avatarFailed.value = false
+    profileMessage.value = '头像已更新'
+  } catch (error) { profileError.value = error.message }
+  finally { uploading.value = false }
+}
 const maskedPhone = computed(() => user.value?.phoneNumber?.replace(/^(\d{3})\d{4}(\d{4})$/, '$1 **** $2') || '个人空间')
 const dateLabel = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date())
 const greeting = new Date().getHours() < 12 ? '上午好' : new Date().getHours() < 18 ? '下午好' : '晚上好'
 const formatDateTime = (value) => value ? String(value).replace('T', ' ').slice(0, 16) : '未设置'
-const profile = computed(() => [
-  ['手机号', user.value?.phoneNumber], ['用户名', user.value?.username],
-  ['真实姓名', user.value?.realName], ['邮箱', user.value?.email],
-  ['个性签名', user.value?.personalizedSignature], ['最近登录', formatDateTime(user.value?.lastLoginAt)],
-])
 const showNotice = (message) => { notice.value = message }
 const loadUser = async () => {
   loading.value = true
   errorMessage.value = ''
-  try { user.value = await fetchMe() }
+  try {
+    user.value = await fetchMe()
+    avatarFailed.value = false
+    syncForm()
+  }
   catch (error) { errorMessage.value = error.message }
   finally { loading.value = false }
 }
@@ -56,7 +101,7 @@ onMounted(loadUser)
       <a class="brand-lockup" href="/home"><span class="brand-mark">m<span>·</span></span>MindMate</a>
       <div class="space-label">PERSONAL WORKSPACE</div>
       <nav class="navigation" aria-label="主导航"><button v-for="view in views" :key="view.id" :class="{ active: activeView === view.id }" :aria-current="activeView === view.id ? 'page' : undefined" @click="activeView = view.id; notice = ''"><span class="nav-icon" aria-hidden="true">{{ view.icon }}</span>{{ view.label }}<span v-if="view.id === 'decisions'" class="ai-tag">AI</span></button></nav>
-      <div class="sidebar-bottom"><div class="sidebar-quote">每一次决定，<br />都会有帮助。</div><button class="account-button" :class="{ selected: activeView === 'account' }" @click="activeView = 'account'; notice = ''"><span class="avatar">{{ name.slice(0, 1) }}</span><span><strong>{{ loading ? '加载中…' : name }}</strong><small>{{ maskedPhone }}</small></span><span class="account-arrow">↗</span></button></div>
+      <div class="sidebar-bottom"><div class="sidebar-quote">每一次决定，<br />都会有帮助。</div><button class="account-button" :class="{ selected: activeView === 'account' }" @click="activeView = 'account'; notice = ''"><span class="avatar"><img v-if="avatarUrl" :src="avatarUrl" alt="个人头像" @error="avatarFailed = true" /><template v-else>{{ name.slice(0, 1) }}</template></span><span><strong>{{ loading ? '加载中…' : name }}</strong><small>{{ maskedPhone }}</small></span><span class="account-arrow">↗</span></button></div>
     </aside>
     <div class="main-shell">
       <header class="topbar"><div><span class="breadcrumb">个人空间</span><span class="slash">/</span><span>{{ currentTitle }}</span></div><div class="topbar-right"><span class="workspace-label"><i></i> 专注当下</span><button class="text-action" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
@@ -70,7 +115,29 @@ onMounted(loadUser)
           <div class="dashboard-grid"><section class="panel today-panel"><div class="section-heading"><h2>今日清单</h2><button class="text-action" @click="activeView = 'tasks'">查看全部 <span aria-hidden="true">↗</span></button></div><div class="empty-state"><div class="empty-symbol" aria-hidden="true">☷</div><h3>给今天，留一个清晰的开始</h3><p>这里将收纳你的待办、计划与进展。<br />任务清单即将开放，先从想清楚一件事开始。</p><span class="status-pill">即将开放</span></div><div class="panel-footer"><span class="tiny-dot"></span>不必填满每一天，重要的是知道先做什么。</div></section><section class="panel companion-panel"><div class="section-heading"><h2>你的决策伙伴</h2><span class="ai-tag">AI · 筹备中</span></div><p class="companion-intro">当选择变得复杂，<br />试着把问题拆得简单一点。</p><div class="prompt-list"><button @click="showNotice('AI 决策功能正在筹备中，后续将结合你的任务与目标提供建议。')"><span>01</span>今天，我应该先做什么？<span>↗</span></button><button @click="showNotice('决策空间即将开放，后续可以在这里梳理选项、收益与代价。')"><span>02</span>这两个选择，该如何取舍？<span>↗</span></button><button @click="showNotice('行动拆解功能正在筹备中，后续将帮助你把目标变成可执行的步骤。')"><span>03</span>如何把目标变成下一步？<span>↗</span></button></div><p class="companion-note">帮你梳理思路，决定始终由你做。</p></section></div>
           <footer class="content-footer"><span>MindMate · 每一次决定，都会有帮助</span><span>留一点空间，给更好的答案。</span></footer>
         </template>
-        <section v-else-if="activeView === 'account'" class="account-view"><span class="eyebrow">YOUR PERSONAL SPACE</span><h1>个人账号</h1><p class="page-description">在这里查看你的账号信息。</p><div class="panel profile-panel"><p v-if="loading">正在加载账号信息…</p><dl v-else-if="user" class="profile"><div v-for="[label, value] in profile" :key="label"><dt>{{ label }}</dt><dd>{{ value || '未设置' }}</dd></div></dl><p v-else class="page-description">账号信息暂时无法加载，请点击上方“重新加载”。</p></div></section>
+        <section v-else-if="activeView === 'account'" class="account-view">
+          <span class="eyebrow">YOUR PERSONAL SPACE</span><h1>个人信息</h1><p class="page-description">让你的个人空间，多一点自己的样子。</p>
+          <div class="panel profile-panel">
+            <p v-if="loading">正在加载账号信息…</p>
+            <template v-else-if="user">
+              <div class="avatar-editor">
+                <span class="avatar profile-avatar"><img v-if="avatarUrl" :src="avatarUrl" alt="个人头像" @error="avatarFailed = true" /><template v-else>{{ name.slice(0, 1) }}</template></span>
+                <div><h2>个人头像</h2><p>支持 JPG、PNG，大小不超过 2MB</p><input ref="fileInput" class="file-input" type="file" accept="image/jpeg,image/png" aria-label="选择头像图片" :disabled="uploading || saving" @change="handleAvatar" /><button type="button" class="button-secondary" :disabled="uploading || saving" @click="fileInput?.click()">{{ uploading ? '正在上传…' : '更换头像' }}</button></div>
+              </div>
+              <p v-if="profileError" class="profile-error" role="alert">{{ profileError }}</p><p v-if="profileMessage" class="profile-success" role="status">{{ profileMessage }}</p>
+              <form class="profile-form" @submit.prevent="saveProfile">
+                <fieldset :disabled="saving || uploading">
+                  <label class="profile-field">手机号<input :value="user.phoneNumber" readonly /><small>手机号作为登录账号，暂不支持修改</small></label>
+                  <label class="profile-field">用户名<input v-model.trim="form.username" maxlength="50" placeholder="为自己取一个名字" autocomplete="nickname" /></label>
+                  <label class="profile-field">邮箱<input v-model.trim="form.email" type="email" maxlength="100" placeholder="请输入邮箱（选填）" autocomplete="email" /></label>
+                  <label class="profile-field full-width">个性签名<textarea v-model.trim="form.personalizedSignature" maxlength="255" rows="3" placeholder="写下一句此刻想对自己说的话" /><small>{{ form.personalizedSignature.length }} / 255</small></label>
+                </fieldset>
+                <div class="profile-actions"><span>最近登录：{{ formatDateTime(user.lastLoginAt) }}</span><div><button type="button" class="button-secondary" :disabled="saving || uploading" @click="syncForm(); profileError = ''; profileMessage = ''">重置</button><button class="button-primary" type="submit" :disabled="saving || uploading">{{ saving ? '保存中…' : '保存修改' }}</button></div></div>
+              </form>
+            </template>
+            <p v-else class="page-description">账号信息暂时无法加载，请点击上方“重新加载”。</p>
+          </div>
+        </section>
         <section v-else class="module-view"><span class="eyebrow">MAKE ROOM FOR WHAT MATTERS</span><h1>{{ currentTitle }}</h1><p class="page-description">{{ activeView === 'tasks' ? '把想做的事，整理成可以迈出的下一步。' : activeView === 'decisions' ? '把选项、顾虑与期待放在一起，让选择更清晰。' : '回头看看走过的路，为下一次选择积累经验。' }}</p><div class="panel module-placeholder"><span class="empty-symbol" aria-hidden="true">{{ activeView === 'tasks' ? '☷' : activeView === 'decisions' ? '◇' : '↺' }}</span><h2>{{ currentTitle }}，即将开放</h2><p>这个空间已为你预留，更多能力正在准备中。</p><button class="button-secondary" @click="activeView = 'overview'">返回工作台</button></div></section>
       </main>
     </div>
@@ -90,6 +157,28 @@ onMounted(loadUser)
 .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }.summary-card { border: 1px solid var(--border); border-radius: 10px; padding: 20px 23px; background: #fff; }.summary-card > span { font-size: 11px; color: var(--text-secondary); }.summary-card strong { display: block; font-size: 29px; font-weight: 500; margin: 10px 0; color: #526456; }.summary-card small { font-size: 10px; margin-left: 9px; font-weight: 400; color: var(--text-muted); }.summary-card p { color: var(--text-muted); font-size: 10px; margin: 0; }
 .dashboard-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }.panel { border: 1px solid var(--border); border-radius: 10px; background: #fff; }.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.section-heading h2 { font-size: 14px; font-weight: 600; margin: 0; }.today-panel { padding: 23px 24px 0; }.empty-state { text-align: center; padding: 28px 0 24px; }.empty-symbol { font-size: 26px; color: #8ca592; background: #f2f6f1; width: 50px; height: 50px; border-radius: 13px; display: inline-grid; place-items: center; }.empty-state h3 { font-size: 13px; font-weight: 500; margin: 17px 0 10px; }.empty-state p, .module-placeholder p { font-size: 11px; color: var(--text-muted); line-height: 1.9; }.status-pill { display: inline-block; font-size: 9px; background: #f5f6f3; color: #8b9789; border-radius: 4px; padding: 5px 10px; margin-top: 7px; }.panel-footer { border-top: 1px solid #eff2ed; padding: 14px 0; font-size: 9px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }.companion-panel { padding: 23px 24px; }.companion-intro { font-size: 19px; line-height: 1.7; color: #526b59; margin: 24px 0 17px; letter-spacing: -.4px; }.prompt-list { display: flex; flex-direction: column; }.prompt-list button { display: flex; align-items: center; gap: 10px; padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid #eff2ed; color: var(--text-secondary); font-size: 11px; text-align: left; }.prompt-list button:hover { color: var(--accent); }.prompt-list button span:first-child { font-size: 9px; color: #a4b2a5; }.prompt-list button span:last-child { margin-left: auto; color: #9aaa9b; }.companion-note { font-size: 9px; color: var(--text-muted); margin: 18px 0 0; }.content-footer { display: flex; justify-content: space-between; gap: 15px; color: #9aa69b; font-size: 9px; padding-top: 25px; }
 .feedback { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 16px; margin-bottom: 20px; border: 1px solid #d7e5d9; background: #eff7f0; border-radius: 7px; color: #41624a; font-size: 12px; line-height: 1.7; }.feedback button { border: 0; background: transparent; color: inherit; white-space: nowrap; }.feedback.error { color: #a63a3a; background: #fff5f3; border-color: #f1ddd7; }.profile-panel { padding: 28px; margin-top: 28px; }.profile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin: 0; }.profile dt { font-size: 11px; color: var(--text-muted); margin-bottom: 9px; }.profile dd { font-size: 14px; margin: 0; overflow-wrap: anywhere; }.module-placeholder { margin-top: 28px; min-height: 360px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }.module-placeholder h2 { font-size: 19px; font-weight: 500; margin: 22px 0 0; }.module-placeholder .button-secondary { margin-top: 18px; }
+.avatar { flex-shrink: 0; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-editor { display: flex; gap: 24px; align-items: center; padding-bottom: 26px; border-bottom: 1px solid var(--border); }
+.profile-avatar { width: 88px; height: 88px; font-size: 30px; }
+.avatar-editor h2 { margin: 0 0 8px; font-size: 15px; font-weight: 500; }
+.avatar-editor p { color: var(--text-muted); font-size: 11px; margin: 0 0 12px; }
+.file-input { display: none; }
+.profile-form fieldset { border: 0; padding: 26px 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; min-width: 0; }
+.profile-field { font-size: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.profile-field input, .profile-field textarea { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 12px; font: inherit; color: var(--text); background: #fff; }
+.profile-field input[readonly] { background: #f6f8f5; color: var(--text-muted); }
+.profile-field textarea { resize: vertical; min-height: 85px; }
+.profile-field small { font-size: 10px; color: var(--text-muted); }
+.full-width { grid-column: 1 / -1; }
+.profile-actions { border-top: 1px solid var(--border); padding-top: 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.profile-actions > span { color: var(--text-muted); font-size: 11px; }
+.profile-actions > div { display: flex; gap: 10px; }
+.profile-actions .button-primary { padding: 10px 18px; }
+.profile-error, .profile-success { font-size: 12px; padding: 12px; border-radius: 6px; line-height: 1.7; }
+.profile-error { color: #a63a3a; background: #fff5f3; }
+.profile-success { color: var(--accent); background: var(--accent-light); }
+@media (max-width: 700px) { .profile-form fieldset { grid-template-columns: 1fr; }.avatar-editor { gap: 16px; }.profile-avatar { width: 72px; height: 72px; }.profile-panel { padding: 20px; } }
 @media (min-width: 1500px) { .content { padding-top: 48px; }.focus-banner { min-height: 255px; }.summary-card { padding: 24px; } }
 @media (max-width: 1100px) { .sidebar { width: 200px; padding-inline: 16px; }.main-shell { margin-left: 200px; }.content { padding: 28px 24px 20px; }.topbar { padding: 0 24px; }.focus-art { width: 170px; }.welcome-stamp { display: none; }.dashboard-grid { grid-template-columns: 1fr; }.companion-intro br { display: none; } }
 @media (max-width: 700px) { .workspace { flex-direction: column; }.sidebar { position: static; width: 100%; padding: 18px 18px 10px; border-right: 0; border-bottom: 1px solid var(--border); }.sidebar .brand-lockup { margin: 0 0 17px; }.space-label, .sidebar-quote { display: none; }.navigation { flex-direction: row; gap: 2px; overflow-x: auto; }.navigation button { padding: 9px 10px; font-size: 11px; white-space: nowrap; gap: 5px; }.nav-icon { font-size: 16px; width: 17px; }.navigation .ai-tag { display: none; }.sidebar-bottom { position: absolute; top: 18px; right: 18px; }.account-button { padding: 0; border: 0; }.account-button > span:not(.avatar) { display: none; }.avatar { width: 30px; height: 30px; }.main-shell { margin-left: 0; }.topbar { min-height: 52px; padding: 0 20px; }.workspace-label { display: none; }.content { padding: 26px 18px 18px; }.welcome h1 { font-size: 24px; }.welcome p { font-size: 11px; }.focus-banner { padding: 25px 22px; min-height: 210px; }.focus-banner h2 { font-size: 20px; }.focus-art { display: none; }.summary-grid { gap: 8px; margin: 14px 0; }.summary-card { padding: 15px 12px; }.summary-card p { display: none; }.summary-card > span { font-size: 10px; }.summary-card strong { font-size: 25px; margin-bottom: 0; }.today-panel, .companion-panel { padding-inline: 18px; }.content-footer span:last-child { display: none; }.profile { grid-template-columns: 1fr; }.eyebrow { font-size: 9px; } }
