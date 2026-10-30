@@ -84,7 +84,6 @@ onBeforeUnmount(() => {
         <div class="thought-card">
           <span class="thought-label">给今天的一个小提醒</span>
           <p>不必一次想清所有事情。<br />先找到，当下最重要的那一件。</p>
-          <div class="thought-line"><span></span><span></span><span></span></div>
         </div>
         <div class="intro-caption"><span class="small-dot"></span> 清晰思考 · 从容行动</div>
       </section>
@@ -108,16 +107,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .login-page { min-height: 100dvh; display: flex; flex-direction: column; background: #fafbf9; }
-.login-header, .login-footer { display: flex; align-items: center; justify-content: space-between; padding: 30px 5%; }
+.login-header, .login-footer { display: flex; flex: none; align-items: center; justify-content: space-between; padding: 20px 5%; }
 .header-note, .login-footer { color: var(--text-muted); font-size: 12px; }
-.login-layout { width: min(1080px, 90%); margin: auto; display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 100px; padding: 58px 0 70px; }
+.login-layout { flex: 1; width: min(1080px, 90%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-content: center; align-items: center; gap: 100px; padding: 20px 0; }
 .intro h1 { font-size: clamp(36px, 4.3vw, 58px); font-weight: 600; line-height: 1.45; letter-spacing: -2px; margin: 24px 0 20px; }
 .period { color: var(--accent); }
 .intro-copy { font-size: 15px; color: var(--text-secondary); line-height: 1.95; }
 .thought-card { border-left: 2px solid #bdd2c6; padding: 3px 0 3px 22px; margin-top: 44px; }
 .thought-label { color: var(--text-muted); font-size: 11px; }
-.thought-card p { font-size: 14px; line-height: 1.9; color: #4c6256; margin: 10px 0 15px; }
-.thought-line { display: flex; gap: 5px; }.thought-line span { height: 3px; width: 17px; background: #dce5df; border-radius: 3px; }.thought-line span:first-child { background: var(--accent); width: 28px; }
+.thought-card p { font-size: 14px; line-height: 1.9; color: #4c6256; margin: 10px 0 0; }
 .intro-caption { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 34px; }
 .small-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .login-panel { padding: 40px; background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 50px #253e2e05; }
@@ -131,6 +129,19 @@ onBeforeUnmount(() => {
 .error-hint { color: #ad3a3a; font-size: 12px; line-height: 1.6; }
 .login-submit { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; margin-top: 30px; }
 .form-footnote { font-size: 11px; color: var(--text-muted); text-align: center; margin: 18px 0 0; }
+@media (min-width: 641px) and (max-height: 800px) {
+  .login-header, .login-footer { padding-block: 14px; }
+  .login-layout { padding-block: 12px; }
+  .intro h1 { font-size: 42px; margin: 16px 0; }
+  .thought-card { margin-top: 24px; }
+  .intro-caption { margin-top: 22px; }
+  .login-panel { padding: 26px 32px; }
+  .login-panel h2 { margin-top: 12px; }
+  .form-description { margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .login-submit { margin-top: 18px; }
+  .form-footnote { margin-top: 12px; }
+}
 @media (max-width: 850px) { .login-layout { gap: 40px; }.login-panel { padding: 28px; }.header-note { display: none; } }
 @media (max-width: 640px) { .login-header { padding: 22px 6%; }.login-layout { grid-template-columns: 1fr; width: 88%; padding: 20px 0 40px; gap: 30px; }.intro h1 { font-size: 34px; margin: 15px 0 12px; letter-spacing: -1px; }.intro-copy { font-size: 13px; }.thought-card, .intro-caption { display: none; }.intro .eyebrow { font-size: 9px; }.login-panel { padding: 26px 22px; }.login-panel h2 { font-size: 21px; }.login-footer { padding: 18px 6%; font-size: 10px; } }
 </style>
