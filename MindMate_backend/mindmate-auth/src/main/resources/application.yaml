@@ -1,4 +1,8 @@
 spring:
+  profiles:
+    # 本地密钥与覆盖项写入 application-local.yaml（已被 .gitignore 排除）。
+    # 正式环境通过 SPRING_PROFILES_ACTIVE 指定其他配置，密钥仍可直接用环境变量注入。
+    active: ${SPRING_PROFILES_ACTIVE:local}
   servlet:
     multipart:
       max-file-size: 2MB
@@ -39,6 +43,11 @@ mybatis-plus:
       # 改由 Task 实体上的 @TableLogic 单独声明。
 
 mindmate:
+  ai:
+    # 仅配置就绪状态，不代表已验证连接；缺少key仍允许应用启动
+    api-key: ${DEEPSEEK_API_KEY:}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    model: ${DEEPSEEK_MODEL:deepseek-flash}
   avatar:
     # 相对路径基于后端进程工作目录，可通过环境变量指定持久化目录
     directory: ${MINDMATE_AVATAR_DIRECTORY:./uploads/avatars}

@@ -27,6 +27,18 @@ public enum ResultCode {
     TASK_NOT_FOUND(2001, "任务不存在或已删除"),
     TASK_STATUS_INVALID(2002, "任务状态只能为0或2"),
     TASK_WRITE_FAILED(2003, "任务保存失败，请稍后再试"),
+    DECISION_PARAM_INVALID(3000, "决策请求参数不合法，请检查后重试"),
+    DECISION_AI_NOT_CONFIGURED(3001, "决策模型尚未配置，请稍后再试"),
+    DECISION_PREFERENCE_INVALID(3002, "偏好内容不合法，请检查后重试"),
+    DECISION_SESSION_NOT_FOUND(3003, "决策会话不存在或已删除"),
+    DECISION_MESSAGE_INVALID(3004, "消息内容不合法，请检查后重试"),
+    DECISION_AI_TIMEOUT(3005, "决策模型响应超时，请稍后重试"),
+    DECISION_AI_UNAUTHORIZED(3006, "决策模型配置无效，请联系管理员"),
+    DECISION_AI_PAYMENT_REQUIRED(3007, "决策模型服务不可用，请联系管理员"),
+    DECISION_AI_RATE_LIMITED(3008, "决策模型请求过于频繁，请稍后重试"),
+    DECISION_AI_SERVICE_ERROR(3009, "决策模型暂时不可用，请稍后重试"),
+    DECISION_LOCKED(3010, "该决策会话正在处理中，请稍后再试"),
+    DECISION_WRITE_FAILED(3011, "决策保存失败，请稍后再试"),
     SERVER_ERROR(1500, "服务器内部错误");
 
     private final int code;

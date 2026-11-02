@@ -2,11 +2,11 @@ import request from './request'
 
 /** 获取验证码。伪装实现，返回值为验证码本身，不真实下发短信 */
 export const sendSmsCode = (phoneNumber) =>
-  request.get('/auth/sendSmsCode', { params: { phoneNumber } })
+    request.get('/auth/sendSmsCode', {params: {phoneNumber}})
 
 /** 验证码登录，返回 { token, user } */
 export const login = (phoneNumber, smsCode) =>
-  request.post('/auth/login', { phoneNumber, smsCode })
+    request.post('/auth/login', {phoneNumber, smsCode})
 
 /** 查询当前登录用户 */
 export const fetchMe = () => request.get('/auth/me')
@@ -16,9 +16,9 @@ export const updateMe = (data) => request.put('/auth/me', data)
 
 /** 上传并保存头像 */
 export const uploadAvatar = (file) => {
-  const data = new FormData()
-  data.append('file', file)
-  return request.post('/auth/avatar', data)
+    const data = new FormData()
+    data.append('file', file)
+    return request.post('/auth/avatar', data)
 }
 
 /** 将服务端头像路径转换为可展示地址 */

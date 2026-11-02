@@ -5,5 +5,6 @@
 -- 新建数据库直接使用 mindmate_schema.sql，不要重复执行本迁移。
 -- 保留已有 REAL_NAME 列及其数据；新代码不再映射或返回真实姓名。
 
-ALTER TABLE "MINDMATE"."SYS_USER" ADD "AVATAR_URL" VARCHAR(255);
+ALTER TABLE "MINDMATE"."SYS_USER"
+    ADD "AVATAR_URL" VARCHAR(255);
 COMMENT ON COLUMN "MINDMATE"."SYS_USER"."AVATAR_URL" IS '头像公开访问路径';

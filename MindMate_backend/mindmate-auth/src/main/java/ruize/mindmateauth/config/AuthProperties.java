@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "mindmate.auth")
 public class AuthProperties {
 
-    /** 登录凭证有效期（小时），默认 7 天 */
+    /**
+     * 登录凭证有效期（小时），默认 7 天
+     */
     private long tokenTtlHours = 168;
 
     /**

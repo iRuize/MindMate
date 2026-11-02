@@ -11,7 +11,7 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
-import java.awt.Graphics2D;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -74,7 +74,9 @@ public class AvatarStorage {
         }
     }
 
-    /** 仅清理本次请求创建的文件，旧头像保留以避免并发更新误删。 */
+    /**
+     * 仅清理本次请求创建的文件，旧头像保留以避免并发更新误删。
+     */
     public void deleteNewFile(Path path) {
         try {
             Files.deleteIfExists(path);
