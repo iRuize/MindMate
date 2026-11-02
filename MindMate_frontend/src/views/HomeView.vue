@@ -7,6 +7,7 @@ import {createTask, deleteTask, fetchTasks, updateTask, updateTaskStatus} from '
 import {fetchDecisions} from '@/api/decisions'
 import TaskList from '@/components/TaskList.vue'
 import PageActions from '@/components/PageActions.vue'
+import QuoteWall from '@/components/QuoteWall.vue'
 import DecisionSpace from '@/components/DecisionSpace.vue'
 
 const router = useRouter()
@@ -120,6 +121,7 @@ const views = [
   {id: 'tasks', icon: '☷', label: '任务清单'},
   {id: 'decisions', icon: '◇', label: '决策空间'},
   {id: 'review', icon: '↺', label: '回顾与洞察'},
+  {id: 'quotes', icon: '❝', label: '经典语录'},
 ]
 const currentTitle = computed(() => views.find((item) => item.id === activeView.value)?.label || '个人账号')
 const name = computed(() => user.value?.username || '朋友')
@@ -433,6 +435,11 @@ onUnmounted(() => {
             <button class="button-secondary" @click="activeView = 'overview'">返回工作台</button>
           </div>
         </section>
+        <QuoteWall v-else-if="activeView === 'quotes'" :active="activeView === 'quotes'">
+          <template #actions>
+            <PageActions :logging-out="loggingOut" @logout="handleLogout"/>
+          </template>
+        </QuoteWall>
       </main>
     </div>
   </div>
