@@ -82,12 +82,6 @@ const canSend = computed(() => config.value?.available === true && !configLoadin
     && !preferencesLoading.value && selectedId.value !== null && messagesLoaded.value
     && !messagesLoading.value && !sessionsLoading.value && !busy.value && !requiresVerification.value
     && Boolean(draft.value.trim()) && draft.value.length <= 4000)
-const privacyDescription = computed(() => {
-  if (!preferencesLoaded.value) return '偏好尚未加载，暂不能确认本次发送范围。请先重新加载个人偏好。'
-  return savedPreferences.value.memoryEnabled
-      ? '本次发送：已保存的个人偏好、本次问题及当前会话内容会发送给 DeepSeek。手机号和邮箱不发送；对话不会自动转为长期记忆。'
-      : '本次发送：本次问题及当前会话内容会发送给 DeepSeek，不附带个人偏好。手机号和邮箱不发送；对话不会自动转为长期记忆。'
-})
 const errorText = (error) => error?.message || '请稍后重试'
 const formatTime = (value) => value ? String(value).replace('T', ' ').slice(0, 16) : ''
 const scrollToBottom = async () => {
@@ -279,8 +273,9 @@ const sendMessage = async () => {
   sendController = controller
   sending.value = true
   thinking.value = true
-  // 先上屏用户消息，等服务端返回后用真实记录替换，避免长时间空白。
+  // 先上屏用户消息并立即清空输入框，等服务端返回后再用真实记录替换。
   optimisticUser.value = {content, createdAt: new Date().toISOString()}
+  drafts.value[key] = ''
   delete sendErrors.value[id]
   conversationNotice.value = ''
   prefillNotice.value = ''
@@ -291,11 +286,12 @@ const sendMessage = async () => {
     optimisticUser.value = null
     thinking.value = false
     messages.value.push(result.userMessage, result.assistantMessage)
-    drafts.value[key] = ''
     void scrollToBottom()
   } catch (error) {
     if (disposed || selectedId.value !== id || sequence !== messageSequence) return
     needsVerification.value[id] = true
+    // 仅在没有新输入时回填，避免覆盖用户在失败后重新输入的内容。
+    if (!drafts.value[key]) drafts.value[key] = content
     sendErrors.value[id] = error.canceled
       ? '已停止等待回复，原输入已保留。服务端可能仍在处理并产生费用，请先刷新当前会话确认结果，确认后再决定是否重新发送。'
       : `发送未确认：${errorText(error)}。若超时或连接中断，服务端仍可能完成并产生费用。请先刷新当前会话确认结果，再决定是否手动发送；不会自动重发，原输入已保留。`
@@ -475,7 +471,7 @@ onBeforeUnmount(() => {
         <form class="composer" @submit.prevent="sendMessage">
           <label class="composer-label" for="decision-question">你的问题</label>
           <div class="composer-box">
-            <textarea id="decision-question" ref="input" v-model="draft" :disabled="busy" aria-describedby="decision-send-scope"
+            <textarea id="decision-question" ref="input" v-model="draft" :disabled="busy"
                       maxlength="4000" placeholder="描述你面临的选择，也可以补充背景与顾虑…"
                       rows="3" @keydown="handleKeydown"/>
             <div class="composer-bar">
@@ -488,7 +484,6 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
-          <p id="decision-send-scope" class="privacy-note">{{ privacyDescription }}</p>
           <p v-if="preferencesLoaded && (preferences.memoryEnabled !== savedPreferences.memoryEnabled || preferenceFields.some(({ key }) => preferences[key] !== savedPreferences[key]))"
              class="draft-note">偏好面板有未保存修改，本次仍按上方已保存的状态发送。</p>
         </form>
@@ -988,10 +983,6 @@ textarea:disabled, .new-session input:disabled {
 
 .composer textarea:focus-visible {
   outline: none;
-}
-
-.composer .privacy-note {
-  margin: 10px 0 0;
 }
 
 .draft-note {
