@@ -54,6 +54,8 @@ const messagesLoading = ref(false)
 const messagesLoaded = ref(false)
 const messagesError = ref('')
 const sending = ref(false)
+const thinking = ref(false)
+const optimisticUser = ref(null)
 const drafts = ref({})
 const sendErrors = ref({})
 const needsVerification = ref({})
@@ -276,12 +278,18 @@ const sendMessage = async () => {
   const controller = new AbortController()
   sendController = controller
   sending.value = true
+  thinking.value = true
+  // 先上屏用户消息，等服务端返回后用真实记录替换，避免长时间空白。
+  optimisticUser.value = {content, createdAt: new Date().toISOString()}
   delete sendErrors.value[id]
   conversationNotice.value = ''
   prefillNotice.value = ''
+  await scrollToBottom()
   try {
     const result = await sendDecisionMessage(id, content, controller.signal)
     if (disposed || selectedId.value !== id || sequence !== messageSequence) return
+    optimisticUser.value = null
+    thinking.value = false
     messages.value.push(result.userMessage, result.assistantMessage)
     drafts.value[key] = ''
     void scrollToBottom()
@@ -294,6 +302,8 @@ const sendMessage = async () => {
   } finally {
     if (sendController === controller) sendController = null
     sending.value = false
+    thinking.value = false
+    optimisticUser.value = null
     if (!disposed) {
       await nextTick()
       if (props.active) input.value?.focus()
@@ -448,8 +458,14 @@ onBeforeUnmount(() => {
             <div v-if="message.role === 'user'" class="message-content">{{ message.content }}</div>
             <MarkdownText v-else :content="message.content" />
           </article>
-          <p v-if="sending" class="waiting-message" role="status">
-            正在等待助手回复，可点击方形按钮停止等待。此时无法切换或删除会话。</p>
+          <article v-if="optimisticUser" class="message user-message pending-message">
+            <div class="message-meta"><strong>你</strong><time>刚刚</time></div>
+            <div class="message-content">{{ optimisticUser.content }}</div>
+          </article>
+          <article v-if="thinking" class="message assistant-message thinking-message" role="status" aria-live="polite">
+            <span class="thinking-dot" aria-hidden="true"></span>
+            <span class="sr-only">决策助手正在思考，可点击方形按钮停止等待</span>
+          </article>
         </div>
         <div v-if="currentSendError" class="decision-feedback error" role="alert"><span>{{ currentSendError }}</span>
           <button :disabled="busy || messagesLoading || sessionsLoading" @click="loadMessages()">刷新当前会话</button>
@@ -883,10 +899,53 @@ textarea:disabled, .new-session input:disabled {
   line-height: 1.9;
 }
 
-.waiting-message {
-  font-size: 12px;
-  color: var(--accent);
-  line-height: 1.8;
+.pending-message {
+  opacity: .72;
+}
+
+.thinking-message {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 15px 18px;
+}
+
+.thinking-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: thinking-breathe 1.35s ease-in-out infinite;
+}
+
+@keyframes thinking-breathe {
+  0%, 100% {
+    opacity: .28;
+    transform: scale(.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-dot {
+    animation: none;
+    opacity: .8;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .conversation-panel > .decision-feedback {
