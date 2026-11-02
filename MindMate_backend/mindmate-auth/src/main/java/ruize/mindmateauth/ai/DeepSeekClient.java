@@ -51,7 +51,7 @@ public class DeepSeekClient {
         ObjectNode requestBody = objectMapper.createObjectNode();
         requestBody.put("model", aiProperties.getModel());
         requestBody.put("stream", false);
-        requestBody.put("max_tokens", 2048);
+        requestBody.put("max_tokens", 4096);
         ArrayNode messageArray = requestBody.putArray("messages");
         for (AiMessage message : messages) {
             ObjectNode messageNode = messageArray.addObject();
