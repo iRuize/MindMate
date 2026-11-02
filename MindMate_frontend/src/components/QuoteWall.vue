@@ -428,14 +428,16 @@ onBeforeUnmount(releasePreview)
 }
 
 .quote-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
-  gap: 16px;
+  /* 分列瀑布流：卡片各按自身高度堆叠，避免整行被最高的带图卡片撑开 */
+  column-width: 240px;
+  column-gap: 16px;
 }
 
 .quote-card {
   display: flex;
   flex-direction: column;
+  break-inside: avoid;
+  margin-bottom: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
@@ -505,7 +507,8 @@ onBeforeUnmount(releasePreview)
   }
 
   .quote-grid {
-    grid-template-columns: 1fr;
+    column-width: auto;
+    column-count: 1;
   }
 
   .composer-row {

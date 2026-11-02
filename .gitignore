@@ -68,3 +68,6 @@ MindMate_backend/**/application-local.yaml
 *.sln
 *.sw?
 
+# 用户上传与图片生成产物（体积大，不入库）
+uploads/
+generated-images/
