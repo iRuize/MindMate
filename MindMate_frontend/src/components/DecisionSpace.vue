@@ -32,7 +32,7 @@ const emptyPreferences = () => ({
 })
 const preferences = ref(emptyPreferences())
 const savedPreferences = ref(emptyPreferences())
-const preferencesOpen = ref(false)
+const activeTab = ref('chat')
 const preferencesLoaded = ref(false)
 const preferencesLoading = ref(false)
 const preferencesBusy = ref(false)
@@ -47,7 +47,6 @@ const sessionsLoading = ref(false)
 const sessionsError = ref('')
 const actionBusy = ref(false)
 const actionError = ref('')
-const newTitle = ref('')
 const selectedId = ref(null)
 const messages = ref([])
 const messagesLoading = ref(false)
@@ -86,7 +85,8 @@ const errorText = (error) => error?.message || '请稍后重试'
 const formatTime = (value) => value ? String(value).replace('T', ' ').slice(0, 16) : ''
 const scrollToBottom = async () => {
   await nextTick()
-  if (!disposed && props.active && messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight
+  if (disposed || !props.active || !messageList.value) return
+  messageList.value.scrollTop = messageList.value.scrollHeight
 }
 
 const loadConfig = async () => {
@@ -178,17 +178,14 @@ const loadSessions = async () => {
   }
 }
 const addSession = async () => {
-  if (busy.value || sessionsLoading.value || !sessionsLoaded.value || newTitle.value.length > 100) return
-  if (!window.confirm('新增一个决策会话？创建会话不会自动发送问题或调用模型。')) return
+  if (busy.value || sessionsLoading.value || !sessionsLoaded.value) return
   actionBusy.value = true
   actionError.value = ''
   try {
-    const title = newTitle.value.trim()
-    const session = await createDecision(title ? {title} : {})
+    const session = await createDecision({})
     sessions.value.unshift(session)
     if (selectedId.value === null && draft.value) drafts.value[`session:${session.id}`] = draft.value
     if (selectedId.value === null) delete drafts.value.new
-    newTitle.value = ''
     ++messageSequence
     selectedId.value = session.id
     messages.value = []
@@ -348,62 +345,41 @@ onBeforeUnmount(() => {
       <div><span class="eyebrow">MAKE ROOM FOR WHAT MATTERS</span>
         <h1>决策空间</h1>
         <p>把选项、顾虑与期待放在一起，让选择更清晰。</p></div>
+      <slot name="actions"/>
+    </header>
+
+    <div v-if="configError" class="decision-feedback error" role="alert"><span>{{ configError }}</span>
+      <button :disabled="configLoading || busy" @click="loadConfig">重新读取</button>
+    </div>
+    <div v-else-if="config && !config.available" class="decision-feedback" role="status"><span>模型尚未配置。请在后端配置 DEEPSEEK_API_KEY；配置就绪后可发送问题。</span>
+      <button :disabled="configLoading || busy" @click="loadConfig">刷新配置</button>
+    </div>
+
+    <nav class="decision-tabs">
+      <div aria-label="决策空间视图" class="tab-list" role="tablist">
+        <button :aria-selected="activeTab === 'chat'" :class="{ active: activeTab === 'chat' }" role="tab" type="button"
+                @click="activeTab = 'chat'">对话</button>
+        <button :aria-selected="activeTab === 'memory'" :class="{ active: activeTab === 'memory' }" role="tab" type="button"
+                @click="activeTab = 'memory'">记忆</button>
+      </div>
       <span class="model-label">{{
           config?.model || 'DeepSeek'
         }} · {{
           configLoading ? '读取配置中' : configError ? '配置状态未知' : config?.available === true ? '密钥已配置' : '未配置密钥'
         }}</span>
-    </header>
-    <div v-if="configError" class="decision-feedback error" role="alert"><span>{{ configError }}</span>
-      <button :disabled="configLoading || busy" @click="loadConfig">重新读取</button>
-    </div>
-    <div v-else-if="config && !config.available" class="decision-feedback" role="status"><span>模型尚未配置。请在后端配置 DEEPSEEK_API_KEY；配置就绪后可发送问题。仍可管理会话和个人偏好。</span>
-      <button :disabled="configLoading || busy" @click="loadConfig">刷新配置</button>
-    </div>
+    </nav>
 
-    <section class="preferences-panel">
-      <button :aria-expanded="preferencesOpen" aria-controls="decision-preferences" class="preferences-toggle"
-              @click="preferencesOpen = !preferencesOpen"><span>个人偏好 <small>{{
-          preferencesLoaded ? savedPreferences.memoryEnabled ? '记忆已启用' : '记忆未启用' : '等待加载'
-        }}</small></span><span aria-hidden="true">{{ preferencesOpen ? '−' : '+' }}</span></button>
-      <div v-if="preferencesLoading" class="preferences-status" role="status">正在加载个人偏好…</div>
-      <div v-if="preferencesError" class="decision-feedback error" role="alert"><span>{{ preferencesError }}</span>
-        <button :disabled="preferencesLoading || busy" @click="loadPreferences">重新加载偏好</button>
-      </div>
-      <div v-if="preferencesNotice" class="decision-feedback" role="status">{{ preferencesNotice }}</div>
-      <div v-show="preferencesOpen" id="decision-preferences" class="preferences-content">
-        <p class="privacy-note">记忆开关默认关闭。启用并保存后，已保存的五项个人偏好和当前会话内容会发送给
-          DeepSeek；手机号和邮箱不发送；对话不会自动转为长期记忆。开关关闭时，仍会发送当前会话内容。</p>
-        <form @submit.prevent="savePreferences">
-          <fieldset :disabled="!preferencesLoaded || preferencesLoading || sessionsLoading || busy">
-            <div class="preference-grid"><label v-for="field in preferenceFields" :key="field.key"
-                                                class="preference-field"><span>{{ field.label }}</span><textarea
-                v-model="preferences[field.key]" :placeholder="field.placeholder" maxlength="1000"
-                rows="2"/><small>{{ preferences[field.key].length }} / 1000</small></label></div>
-            <label class="memory-switch"><input v-model="preferences.memoryEnabled" role="switch" type="checkbox"/>启用个人偏好记忆（保存后生效）</label>
-            <div class="preferences-actions">
-              <button class="danger-button" type="button" @click="clearPreferences">清空记忆</button>
-              <button class="button-primary" type="submit">{{ preferencesBusy ? '处理中…' : '保存偏好与开关' }}</button>
-            </div>
-          </fieldset>
-        </form>
-      </div>
-    </section>
-
-    <div class="decision-layout">
+    <div v-show="activeTab === 'chat'" class="decision-layout">
       <aside aria-label="决策会话列表" class="sessions-panel">
-        <div class="sessions-heading"><h2>我的会话</h2>
-          <button :disabled="sessionsLoading || busy" class="link-button" @click="loadSessions">
-            {{ sessionsLoading ? '加载中…' : '刷新' }}
+        <div class="sessions-heading"><h2>最近</h2>
+          <button :disabled="busy || sessionsLoading || !sessionsLoaded" aria-label="新增会话" class="add-session"
+                  title="新增会话" @click="addSession">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><path d="M12 5v14M5 12h14" fill="none"
+                                                                                   stroke="currentColor"
+                                                                                   stroke-linecap="round"
+                                                                                   stroke-width="2"/></svg>
           </button>
         </div>
-        <form class="new-session" @submit.prevent="addSession"><label for="decision-title">会话标题（选填）</label><input
-            id="decision-title" v-model="newTitle" :disabled="busy || sessionsLoading || !sessionsLoaded" maxlength="100"
-            placeholder="给这次思考起个名字"/>
-          <button :disabled="busy || sessionsLoading || !sessionsLoaded" class="button-secondary" type="submit">
-            {{ actionBusy ? '处理中…' : '新增会话' }}
-          </button>
-        </form>
         <div v-if="sessionsError" class="decision-feedback error" role="alert"><span>{{ sessionsError }}</span>
           <button :disabled="sessionsLoading || busy" @click="loadSessions">重试</button>
         </div>
@@ -412,7 +388,7 @@ onBeforeUnmount(() => {
         </div>
         <p v-if="sessionsLoading" class="empty-copy" role="status">正在读取会话…</p>
         <p v-else-if="sessionsLoaded && !sessions.length" class="empty-copy">
-          还没有会话。新增一个，留一点空间给重要的选择。</p>
+          还没有会话。点右上角 + 新建一个，留一点空间给重要的选择。</p>
         <ul class="session-list">
           <li v-for="session in sessions" :key="session.id" :class="{ selected: selectedId === session.id }">
             <button :aria-current="selectedId === session.id ? 'true' : undefined" :disabled="busy || sessionsLoading"
@@ -434,7 +410,7 @@ onBeforeUnmount(() => {
                   @click="loadMessages()">{{ messagesLoading ? '读取中…' : '刷新会话' }}
           </button>
         </header>
-        <div ref="messageList" aria-label="消息记录" class="message-list" tabindex="0">
+        <div ref="messageList" aria-label="消息记录" class="message-list">
           <p v-if="messagesLoading" class="empty-copy" role="status">正在加载消息…</p>
           <div v-if="messagesError" class="decision-feedback error" role="alert"><span>{{ messagesError }}</span>
             <button :disabled="busy || messagesLoading" @click="loadMessages()">重新加载</button>
@@ -485,43 +461,79 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <p v-if="preferencesLoaded && (preferences.memoryEnabled !== savedPreferences.memoryEnabled || preferenceFields.some(({ key }) => preferences[key] !== savedPreferences[key]))"
-             class="draft-note">偏好面板有未保存修改，本次仍按上方已保存的状态发送。</p>
+             class="draft-note">记忆中有未保存的修改，本次仍按已保存的状态发送。</p>
         </form>
       </section>
     </div>
+
+    <section v-show="activeTab === 'memory'" class="memory-panel">
+      <div class="memory-head">
+        <h2>记忆</h2>
+        <p>写下你希望我记住的部分。只有开启记忆并保存后，这些内容才会随对话发送给模型；手机号和邮箱不会发送，对话也不会自动转成长期记忆。</p>
+      </div>
+      <div v-if="preferencesLoading" class="preferences-status" role="status">正在加载记忆…</div>
+      <div v-if="preferencesError" class="decision-feedback error" role="alert"><span>{{ preferencesError }}</span>
+        <button :disabled="preferencesLoading || busy" @click="loadPreferences">重新加载</button>
+      </div>
+      <div v-if="preferencesNotice" class="decision-feedback" role="status">{{ preferencesNotice }}</div>
+      <form @submit.prevent="savePreferences">
+        <fieldset :disabled="!preferencesLoaded || preferencesLoading || sessionsLoading || busy">
+          <div class="preference-grid"><label v-for="field in preferenceFields" :key="field.key"
+                                              class="preference-field"><span>{{ field.label }}</span><textarea
+              v-model="preferences[field.key]" :placeholder="field.placeholder" maxlength="1000"
+              rows="2"/><small>{{ preferences[field.key].length }} / 1000</small></label></div>
+          <label class="memory-switch"><input v-model="preferences.memoryEnabled" role="switch" type="checkbox"/>启用记忆（保存后生效）</label>
+          <div class="preferences-actions">
+            <button class="danger-button" type="button" @click="clearPreferences">清空记忆</button>
+            <button class="button-primary" type="submit">{{ preferencesBusy ? '处理中…' : '保存记忆' }}</button>
+          </div>
+        </fieldset>
+      </form>
+    </section>
   </section>
 </template>
 
 <style scoped>
+.decision-space {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 24px);
+  min-height: 380px;
+}
+
+.decision-heading, .decision-tabs {
+  flex-shrink: 0;
+}
+
 .decision-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 22px;
+  margin-bottom: 10px;
 }
 
 .decision-heading h1 {
-  margin: 12px 0;
-  font-size: 28px;
+  margin: 6px 0;
+  font-size: 23px;
   font-weight: 600;
   letter-spacing: -1px;
 }
 
 .decision-heading p {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.8;
 }
 
 .model-label {
   flex-shrink: 0;
-  padding: 7px 10px;
+  padding: 5px 8px;
   border-radius: 6px;
   color: var(--accent);
   background: var(--accent-light);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .decision-feedback {
@@ -558,47 +570,74 @@ onBeforeUnmount(() => {
   text-underline-offset: 3px;
 }
 
-.preferences-panel {
-  margin-bottom: 20px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.preferences-toggle {
-  width: 100%;
+.decision-tabs {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.tab-list {
+  display: flex;
+  gap: 22px;
+}
+
+.tab-list button {
+  position: relative;
   border: 0;
-  padding: 17px 20px;
-  text-align: left;
-  background: #fff;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.preferences-toggle small {
-  margin-left: 12px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.preferences-panel > .decision-feedback {
-  margin: 0 16px 14px;
-}
-
-.preferences-status {
-  padding: 0 20px 14px;
+  background: transparent;
+  padding: 0 0 10px;
   font-size: 12px;
   color: var(--text-secondary);
 }
 
-.preferences-content {
-  border-top: 1px solid var(--border);
-  padding: 18px 20px;
+.tab-list button.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tab-list button.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+.memory-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.memory-head h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.memory-head p {
+  margin: 0 0 18px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.memory-panel form {
+  max-width: 820px;
+}
+
+.preferences-status {
+  padding: 4px 0 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .privacy-note {
@@ -608,7 +647,7 @@ onBeforeUnmount(() => {
   line-height: 1.9;
 }
 
-.preferences-content fieldset {
+.memory-panel fieldset {
   min-width: 0;
   border: 0;
   margin: 0;
@@ -639,7 +678,7 @@ onBeforeUnmount(() => {
   text-align: right;
 }
 
-textarea, .new-session input {
+textarea {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -660,7 +699,7 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-textarea:disabled, .new-session input:disabled {
+textarea:disabled {
   background: #f7f9f6;
 }
 
@@ -697,20 +736,25 @@ textarea:disabled, .new-session input:disabled {
 
 .decision-layout {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 30px;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
 }
 
 .sessions-panel, .conversation-panel {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   min-width: 0;
 }
 
 .sessions-panel {
-  padding: 18px 14px;
+  padding: 0 24px 0 0;
+  border-right: 1px solid var(--border);
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sessions-heading, .conversation-heading {
@@ -731,28 +775,41 @@ textarea:disabled, .new-session input:disabled {
   color: var(--accent);
 }
 
-.new-session {
-  margin-top: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+.add-session {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 0;
+  border: 1px solid #dde6da;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
 }
 
-.new-session label {
-  font-size: 11px;
-  color: var(--text-secondary);
+.add-session svg {
+  display: block;
 }
 
-.new-session .button-secondary {
-  padding: 9px 12px;
+.add-session:hover:not(:disabled) {
+  background: var(--accent-light);
+  border-color: #c9ddca;
+}
+
+.add-session:disabled {
+  color: #b3c0b1;
+  cursor: not-allowed;
+  background: #f7f9f6;
 }
 
 .session-list {
   list-style: none;
   padding: 0;
-  margin: 16px 0 0;
-  max-height: 500px;
-  overflow-y: auto;
+  margin: 10px 0 0;
 }
 
 .session-list li {
@@ -801,26 +858,28 @@ textarea:disabled, .new-session input:disabled {
 }
 
 .conversation-panel {
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .conversation-heading {
-  padding: 20px;
+  padding: 0 0 10px;
   border-bottom: 1px solid var(--border);
 }
 
 .conversation-heading p {
-  margin: 7px 0 0;
-  font-size: 11px;
+  margin: 4px 0 0;
+  font-size: 10px;
   color: var(--text-muted);
   line-height: 1.8;
 }
 
 .message-list {
-  height: clamp(300px, 48vh, 600px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
-  overscroll-behavior: contain;
+  padding: 12px 0 2px;
 }
 
 .empty-copy {
@@ -854,10 +913,10 @@ textarea:disabled, .new-session input:disabled {
 
 .message {
   width: fit-content;
-  max-width: 92%;
-  margin-bottom: 18px;
-  padding: 14px 16px;
-  border-radius: 10px;
+  max-width: 88%;
+  margin-bottom: 10px;
+  padding: 11px 14px;
+  border-radius: 9px;
 }
 
 .user-message {
@@ -868,8 +927,9 @@ textarea:disabled, .new-session input:disabled {
 
 .assistant-message {
   margin-right: auto;
-  background: #f7f9f6;
-  border: 1px solid var(--border);
+  background: #fff;
+  border: 1px solid #e7eee4;
+  box-shadow: 0 1px 2px rgba(54, 78, 60, .03);
 }
 
 .message-meta {
@@ -944,25 +1004,26 @@ textarea:disabled, .new-session input:disabled {
 }
 
 .conversation-panel > .decision-feedback {
-  margin: 0 18px 14px;
+  margin: 12px 0;
 }
 
 .composer {
-  border-top: 1px solid var(--border);
-  padding: 18px 20px;
+  flex-shrink: 0;
+  border-top: 0;
+  padding: 10px 0 0;
 }
 
 .composer-label {
   display: block;
-  font-size: 12px;
-  margin-bottom: 10px;
+  font-size: 11px;
+  margin-bottom: 8px;
 }
 
 .composer-box {
   border: 1px solid #dde6da;
   border-radius: 12px;
   background: #fff;
-  padding: 10px 10px 8px 12px;
+  padding: 8px 10px 6px;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 
@@ -973,8 +1034,8 @@ textarea:disabled, .new-session input:disabled {
 
 .composer textarea {
   display: block;
-  min-height: 72px;
-  max-height: 260px;
+  min-height: 52px;
+  max-height: 200px;
   border: 0;
   padding: 4px 0;
   background: transparent;
@@ -1001,7 +1062,7 @@ textarea:disabled, .new-session input:disabled {
 }
 
 .composer-hint {
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.8;
   color: var(--text-muted);
 }
@@ -1012,12 +1073,18 @@ textarea:disabled, .new-session input:disabled {
   flex-shrink: 0;
   display: grid;
   place-items: center;
+  padding: 0;
+  line-height: 0;
   border: 0;
   border-radius: 9px;
   background: var(--accent);
   color: #fff;
   cursor: pointer;
   transition: opacity .15s ease, background .15s ease;
+}
+
+.send-button svg {
+  display: block;
 }
 
 .send-button:hover:not(:disabled) {
@@ -1048,10 +1115,41 @@ textarea:disabled, .new-session input:disabled {
   display: block;
 }
 
+.message-list, .sessions-panel, .memory-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #d8e3d7 transparent;
+}
+
+.message-list::-webkit-scrollbar,
+.sessions-panel::-webkit-scrollbar,
+.memory-panel::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.message-list::-webkit-scrollbar-track,
+.sessions-panel::-webkit-scrollbar-track,
+.memory-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-list::-webkit-scrollbar-thumb,
+.sessions-panel::-webkit-scrollbar-thumb,
+.memory-panel::-webkit-scrollbar-thumb {
+  background: #dde7dc;
+  border-radius: 3px;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover,
+.sessions-panel::-webkit-scrollbar-thumb:hover,
+.memory-panel::-webkit-scrollbar-thumb:hover {
+  background: #cad8c8;
+}
+
 @media (max-width: 1000px) {
   .decision-layout {
-    grid-template-columns: 190px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 20px;
   }
 
   .decision-heading {
@@ -1059,26 +1157,30 @@ textarea:disabled, .new-session input:disabled {
     flex-direction: column;
   }
 
-  .conversation-heading, .composer, .message-list {
-    padding: 16px;
+  .sessions-panel {
+    padding-right: 18px;
+  }
+
+  .message-list {
+    padding: 18px 0 6px;
   }
 }
 
 @media (max-width: 700px) {
   .decision-layout {
     grid-template-columns: 1fr;
+    gap: 0;
   }
 
-  .session-list {
-    max-height: 210px;
+  .sessions-panel {
+    padding: 0 0 20px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
   }
 
   .preference-grid {
     grid-template-columns: 1fr;
-  }
-
-  .preferences-toggle, .preferences-content {
-    padding: 16px;
   }
 
   .decision-heading h1 {
@@ -1097,8 +1199,13 @@ textarea:disabled, .new-session input:disabled {
     max-width: 97%;
   }
 
-  .message-list {
-    height: 390px;
+  .decision-space {
+    height: auto;
+    min-height: 0;
+  }
+
+  .message-list, .sessions-panel, .memory-panel {
+    overflow: visible;
   }
 }
 </style>

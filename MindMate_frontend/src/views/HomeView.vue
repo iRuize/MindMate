@@ -6,6 +6,7 @@ import {TOKEN_KEY} from '@/api/request'
 import {createTask, deleteTask, fetchTasks, updateTask, updateTaskStatus} from '@/api/tasks'
 import {fetchDecisions} from '@/api/decisions'
 import TaskList from '@/components/TaskList.vue'
+import PageActions from '@/components/PageActions.vue'
 import DecisionSpace from '@/components/DecisionSpace.vue'
 
 const router = useRouter()
@@ -253,16 +254,7 @@ onUnmounted(() => {
       </div>
     </aside>
     <div class="main-shell">
-      <header class="topbar">
-        <div><span class="breadcrumb">个人空间</span><span class="slash">/</span><span>{{ currentTitle }}</span></div>
-        <div class="topbar-right"><span class="workspace-label"><i></i> 专注当下</span>
-          <button :disabled="loggingOut" class="text-action" @click="handleLogout">{{
-              loggingOut ? '退出中…' : '退出登录'
-            }}
-          </button>
-        </div>
-      </header>
-      <main class="content">
+      <main class="content" :class="{ 'content-flush': activeView === 'decisions' }">
         <div v-if="errorMessage" class="feedback error" role="alert">{{ errorMessage }}
           <button @click="loadUser">重新加载</button>
         </div>
@@ -287,7 +279,7 @@ onUnmounted(() => {
             <div><span class="eyebrow">{{ dateLabel }}</span>
               <h1>{{ greeting }}，{{ name }}<span class="greeting-dot">。</span></h1>
               <p>把纷繁留在外面，在这里找到今天的方向。</p></div>
-            <span class="welcome-stamp">ONE THING AT A TIME</span></section>
+            <PageActions :logging-out="loggingOut" @logout="handleLogout"/></section>
           <section class="focus-banner">
             <div><span class="eyebrow">A LITTLE CLARITY, EVERY DAY</span>
               <h2>先理清思路，再迈出下一步。</h2>
@@ -362,13 +354,24 @@ onUnmounted(() => {
         </template>
         <TaskList v-show="activeView === 'tasks'" ref="taskList" :busy="taskBusy" :change-status="changeTaskStatus"
                   :loaded="tasksLoaded" :loading="tasksLoading" :now="now" :remove-task="removeTask"
-                  :save-task="saveTask" :tasks="tasks" @refresh="reloadTasks"/>
+                  :save-task="saveTask" :tasks="tasks" @refresh="reloadTasks">
+          <template #actions>
+            <PageActions :logging-out="loggingOut" @logout="handleLogout"/>
+          </template>
+        </TaskList>
         <DecisionSpace v-show="activeView === 'decisions'" ref="decisionSpace" :active="activeView === 'decisions'"
-                       @changed="reloadDecisions"/>
+                       @changed="reloadDecisions">
+          <template #actions>
+            <PageActions :logging-out="loggingOut" @logout="handleLogout"/>
+          </template>
+        </DecisionSpace>
         <section v-if="activeView === 'account'" class="account-view">
-          <span class="eyebrow">YOUR PERSONAL SPACE</span>
-          <h1>个人信息</h1>
-          <p class="page-description">让你的个人空间，多一点自己的样子。</p>
+          <div class="account-head">
+            <div><span class="eyebrow">YOUR PERSONAL SPACE</span>
+              <h1>个人信息</h1>
+              <p class="page-description">让你的个人空间，多一点自己的样子。</p></div>
+            <PageActions :logging-out="loggingOut" @logout="handleLogout"/>
+          </div>
           <div class="panel profile-panel">
             <p v-if="loading">正在加载账号信息…</p>
             <template v-else-if="user">
@@ -417,9 +420,13 @@ onUnmounted(() => {
             <p v-else class="page-description">账号信息暂时无法加载，请点击上方“重新加载”。</p>
           </div>
         </section>
-        <section v-else-if="activeView === 'review'" class="module-view"><span class="eyebrow">MAKE ROOM FOR WHAT MATTERS</span>
-          <h1>{{ currentTitle }}</h1>
-          <p class="page-description">回头看看走过的路，为下一次选择积累经验。</p>
+        <section v-else-if="activeView === 'review'" class="module-view">
+          <div class="module-head">
+            <div><span class="eyebrow">MAKE ROOM FOR WHAT MATTERS</span>
+              <h1>{{ currentTitle }}</h1>
+              <p class="page-description">回头看看走过的路，为下一次选择积累经验。</p></div>
+            <PageActions :logging-out="loggingOut" @logout="handleLogout"/>
+          </div>
           <div class="panel module-placeholder"><span aria-hidden="true" class="empty-symbol">↺</span>
             <h2>{{ currentTitle }}，即将开放</h2>
             <p>这个空间已为你预留，更多能力正在准备中。</p>
@@ -569,40 +576,7 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.topbar {
-  min-height: 73px;
-  padding: 0 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  font-size: 11px;
-  background: #ffffffb3;
-}
-
-.breadcrumb {
-  color: var(--text-muted);
-}
-
-.slash {
-  margin: 0 15px;
-  color: #bec6bf;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 25px;
-}
-
-.workspace-label {
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.workspace-label i, .tiny-dot {
+.tiny-dot {
   width: 5px;
   height: 5px;
   background: #769a7f;
@@ -625,7 +599,12 @@ onUnmounted(() => {
 .content {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 36px 40px 22px;
+  padding: 28px 40px 22px;
+}
+
+.content.content-flush {
+  padding-top: 8px;
+  padding-bottom: 12px;
 }
 
 .welcome {
@@ -633,6 +612,20 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 28px;
+}
+
+.module-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.account-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
 }
 
 .welcome h1, .account-view h1, .module-view h1 {
@@ -651,12 +644,6 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.8;
   margin: 0;
-}
-
-.welcome-stamp {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: #94a398;
 }
 
 .focus-banner {
@@ -1250,16 +1237,8 @@ onUnmounted(() => {
     padding: 28px 24px 20px;
   }
 
-  .topbar {
-    padding: 0 24px;
-  }
-
   .focus-art {
     width: 170px;
-  }
-
-  .welcome-stamp {
-    display: none;
   }
 
   .dashboard-grid {
@@ -1336,15 +1315,6 @@ onUnmounted(() => {
 
   .main-shell {
     margin-left: 0;
-  }
-
-  .topbar {
-    min-height: 52px;
-    padding: 0 20px;
-  }
-
-  .workspace-label {
-    display: none;
   }
 
   .content {
