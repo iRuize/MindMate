@@ -54,6 +54,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# 本地密钥与覆盖配置（后端）
+MindMate_backend/**/application-local.yaml
+
 # 编辑器配置
 .vscode/*
 !.vscode/extensions.json

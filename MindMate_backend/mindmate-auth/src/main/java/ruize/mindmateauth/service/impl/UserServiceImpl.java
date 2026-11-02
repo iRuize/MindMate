@@ -40,13 +40,21 @@ import java.util.UUID;
 @Service
 public class UserServiceImpl implements UserService {
 
-    /** 验证码有效期 */
+    /**
+     * 验证码有效期
+     */
     private static final Duration CODE_TTL = Duration.ofMinutes(2);
-    /** 同一手机号重复发送的冷却窗口 */
+    /**
+     * 同一手机号重复发送的冷却窗口
+     */
     private static final Duration SEND_COOLDOWN = Duration.ofSeconds(60);
-    /** 单日发送上限 */
+    /**
+     * 单日发送上限
+     */
     private static final int DAILY_LIMIT = 5;
-    /** 单个验证码允许的最大校验失败次数 */
+    /**
+     * 单个验证码允许的最大校验失败次数
+     */
     private static final int MAX_ATTEMPT = 5;
 
     private final UserMapper userMapper;

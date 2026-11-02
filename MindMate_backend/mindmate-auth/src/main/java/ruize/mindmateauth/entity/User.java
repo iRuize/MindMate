@@ -34,9 +34,13 @@ public class User {
     private String personalizedSignature;
     private String email;
 
-    /** 创建时间由数据库 DEFAULT CURRENT_TIMESTAMP 生成，插入时留空即可 */
+    /**
+     * 创建时间由数据库 DEFAULT CURRENT_TIMESTAMP 生成，插入时留空即可
+     */
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    /** 最近登录时间，登录成功时由服务层写入 */
+    /**
+     * 最近登录时间，登录成功时由服务层写入
+     */
     private LocalDateTime lastLoginAt;
 }

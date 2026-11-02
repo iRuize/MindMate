@@ -14,7 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LoginResponse {
-    /** 登录凭证，后续请求置于 Authorization: Bearer {token} */
+    /**
+     * 登录凭证，后续请求置于 Authorization: Bearer {token}
+     */
     private String token;
     private UserVO user;
 }

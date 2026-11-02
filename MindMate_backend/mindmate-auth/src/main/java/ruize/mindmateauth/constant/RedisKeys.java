@@ -13,28 +13,45 @@ public final class RedisKeys {
     private RedisKeys() {
     }
 
-    /** 短信验证码，值为明文验证码 */
+    /**
+     * 短信验证码，值为明文验证码
+     */
     public static String smsCode(String phoneNumber) {
         return "sms:code:" + phoneNumber;
     }
 
-    /** 发送冷却标记，仅用于判断是否处于冷却窗口，不存业务数据 */
+    /**
+     * 发送冷却标记，仅用于判断是否处于冷却窗口，不存业务数据
+     */
     public static String smsCooldown(String phoneNumber) {
         return "sms:cooldown:" + phoneNumber;
     }
 
-    /** 当日发送计数，过期时间为次日零点 */
+    /**
+     * 当日发送计数，过期时间为次日零点
+     */
     public static String smsDaily(String phoneNumber) {
         return "sms:daily:" + phoneNumber;
     }
 
-    /** 验证码校验失败次数，与验证码同生命周期 */
+    /**
+     * 验证码校验失败次数，与验证码同生命周期
+     */
     public static String smsAttempt(String phoneNumber) {
         return "sms:attempt:" + phoneNumber;
     }
 
-    /** 登录凭证，值为用户ID */
+    /**
+     * 登录凭证，值为用户ID
+     */
     public static String authToken(String token) {
         return "auth:token:" + token;
+    }
+
+    /**
+     * 决策会话锁，值为随机UUID
+     */
+    public static String decisionSessionLock(Long userId, Long sessionId) {
+        return "decision:session:lock:" + userId + ":" + sessionId;
     }
 }
