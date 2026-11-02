@@ -243,7 +243,6 @@ onUnmounted(() => {
             v-if="view.id === 'decisions'" class="ai-tag">AI</span></button>
       </nav>
       <div class="sidebar-bottom">
-        <div class="sidebar-quote">每一次决定，<br/>都会有帮助。</div>
         <button :class="{ selected: activeView === 'account' }" class="account-button"
                 @click="activeView = 'account'; notice = ''"><span class="avatar"><img v-if="avatarUrl" :src="avatarUrl"
                                                                                        alt="个人头像"
@@ -513,13 +512,6 @@ onUnmounted(() => {
 
 .sidebar-bottom {
   margin-top: auto;
-}
-
-.sidebar-quote {
-  margin: 40px 12px 25px;
-  font-size: 15px;
-  line-height: 1.9;
-  color: #83988a;
 }
 
 .account-button {
@@ -1296,7 +1288,7 @@ onUnmounted(() => {
     margin: 0 0 17px;
   }
 
-  .space-label, .sidebar-quote {
+  .space-label {
     display: none;
   }
 
