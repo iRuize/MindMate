@@ -1,5 +1,6 @@
 <script setup>
 import {computed, nextTick, onBeforeUnmount, ref, watch} from 'vue'
+import MarkdownText from '@/components/MarkdownText.vue'
 import {
   clearDecisionPreferences,
   createDecision,
@@ -63,6 +64,7 @@ const input = ref(null)
 let messageSequence = 0
 let disposed = false
 let initializationPromise
+let sendController = null
 const busy = computed(() => sending.value || actionBusy.value || preferencesBusy.value)
 const selectedSession = computed(() => sessions.value.find((item) => item.id === selectedId.value))
 const draftKey = computed(() => selectedId.value === null ? 'new' : `session:${selectedId.value}`)
@@ -271,12 +273,14 @@ const sendMessage = async () => {
   const sequence = messageSequence
   const key = draftKey.value
   const content = draft.value.trim()
+  const controller = new AbortController()
+  sendController = controller
   sending.value = true
   delete sendErrors.value[id]
   conversationNotice.value = ''
   prefillNotice.value = ''
   try {
-    const result = await sendDecisionMessage(id, content)
+    const result = await sendDecisionMessage(id, content, controller.signal)
     if (disposed || selectedId.value !== id || sequence !== messageSequence) return
     messages.value.push(result.userMessage, result.assistantMessage)
     drafts.value[key] = ''
@@ -284,14 +288,21 @@ const sendMessage = async () => {
   } catch (error) {
     if (disposed || selectedId.value !== id || sequence !== messageSequence) return
     needsVerification.value[id] = true
-    sendErrors.value[id] = `发送未确认：${errorText(error)}。若超时或连接中断，服务端仍可能完成并产生费用。请先刷新当前会话确认结果，再决定是否手动发送；不会自动重发，原输入已保留。`
+    sendErrors.value[id] = error.canceled
+      ? '已停止等待回复，原输入已保留。服务端可能仍在处理并产生费用，请先刷新当前会话确认结果，确认后再决定是否重新发送。'
+      : `发送未确认：${errorText(error)}。若超时或连接中断，服务端仍可能完成并产生费用。请先刷新当前会话确认结果，再决定是否手动发送；不会自动重发，原输入已保留。`
   } finally {
+    if (sendController === controller) sendController = null
     sending.value = false
     if (!disposed) {
       await nextTick()
       if (props.active) input.value?.focus()
     }
   }
+}
+const stopSending = () => {
+  if (!sending.value || !sendController) return
+  sendController.abort()
 }
 const handleKeydown = (event) => {
   if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
@@ -343,8 +354,6 @@ onBeforeUnmount(() => {
     <div v-else-if="config && !config.available" class="decision-feedback" role="status"><span>模型尚未配置。请在后端配置 DEEPSEEK_API_KEY；配置就绪后可发送问题。仍可管理会话和个人偏好。</span>
       <button :disabled="configLoading || busy" @click="loadConfig">刷新配置</button>
     </div>
-    <p v-if="config?.available && !configError" class="configuration-note">
-      密钥已配置仅表示后端配置就绪，不代表模型已连接成功或请求一定成功。</p>
 
     <section class="preferences-panel">
       <button :aria-expanded="preferencesOpen" aria-controls="decision-preferences" class="preferences-toggle"
@@ -436,10 +445,11 @@ onBeforeUnmount(() => {
             <div class="message-meta"><strong>{{ message.role === 'user' ? '你' : '决策助手' }}</strong>
               <time>{{ formatTime(message.createdAt) }}</time>
             </div>
-            <div class="message-content">{{ message.content }}</div>
+            <div v-if="message.role === 'user'" class="message-content">{{ message.content }}</div>
+            <MarkdownText v-else :content="message.content" />
           </article>
           <p v-if="sending" class="waiting-message" role="status">
-            正在等待助手回复，请勿重复发送。此时无法切换或删除会话。</p>
+            正在等待助手回复，可点击方形按钮停止等待。此时无法切换或删除会话。</p>
         </div>
         <div v-if="currentSendError" class="decision-feedback error" role="alert"><span>{{ currentSendError }}</span>
           <button :disabled="busy || messagesLoading || sessionsLoading" @click="loadMessages()">刷新当前会话</button>
@@ -448,17 +458,23 @@ onBeforeUnmount(() => {
         <div v-if="prefillNotice" class="decision-feedback" role="status">{{ prefillNotice }}</div>
         <form class="composer" @submit.prevent="sendMessage">
           <label class="composer-label" for="decision-question">你的问题</label>
-          <textarea id="decision-question" ref="input" v-model="draft" :disabled="busy" aria-describedby="decision-send-scope"
-                    maxlength="4000" placeholder="描述你面临的选择，也可以补充背景与顾虑…"
-                    rows="4" @keydown="handleKeydown"/>
+          <div class="composer-box">
+            <textarea id="decision-question" ref="input" v-model="draft" :disabled="busy" aria-describedby="decision-send-scope"
+                      maxlength="4000" placeholder="描述你面临的选择，也可以补充背景与顾虑…"
+                      rows="3" @keydown="handleKeydown"/>
+            <div class="composer-bar">
+              <span class="composer-hint">Enter 发送 · Shift + Enter 换行 · {{ draft.length }}/4000</span>
+              <button v-if="!sending" class="send-button" type="submit" :disabled="!canSend" aria-label="发送问题" title="发送">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 6v12M12 6l-5.5 5.5M12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button v-else class="send-button stop" type="button" aria-label="停止等待回复" title="停止" @click="stopSending">
+                <span class="stop-square" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
           <p id="decision-send-scope" class="privacy-note">{{ privacyDescription }}</p>
           <p v-if="preferencesLoaded && (preferences.memoryEnabled !== savedPreferences.memoryEnabled || preferenceFields.some(({ key }) => preferences[key] !== savedPreferences[key]))"
              class="draft-note">偏好面板有未保存修改，本次仍按上方已保存的状态发送。</p>
-          <div class="composer-actions"><span>Enter 发送 · Shift + Enter 换行<br/>{{ draft.length }} / 4000 · 发送将调用模型，可能产生费用</span>
-            <button :disabled="!canSend" class="button-primary" type="submit">
-              {{ sending ? '等待回复…' : requiresVerification ? '请先刷新确认' : '发送问题' }}
-            </button>
-          </div>
         </form>
       </section>
     </div>
@@ -481,7 +497,7 @@ onBeforeUnmount(() => {
   letter-spacing: -1px;
 }
 
-.decision-heading p, .configuration-note {
+.decision-heading p {
   margin: 0;
   font-size: 12px;
   color: var(--text-secondary);
@@ -495,10 +511,6 @@ onBeforeUnmount(() => {
   color: var(--accent);
   background: var(--accent-light);
   font-size: 11px;
-}
-
-.configuration-note {
-  margin: -8px 0 16px;
 }
 
 .decision-feedback {
@@ -892,14 +904,35 @@ textarea:disabled, .new-session input:disabled {
   margin-bottom: 10px;
 }
 
+.composer-box {
+  border: 1px solid #dde6da;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 10px 8px 12px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.composer-box:focus-within {
+  border-color: #a9c6b1;
+  box-shadow: 0 0 0 3px #eef5ed;
+}
+
 .composer textarea {
   display: block;
-  min-height: 105px;
-  max-height: 300px;
+  min-height: 72px;
+  max-height: 260px;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  resize: none;
+}
+
+.composer textarea:focus-visible {
+  outline: none;
 }
 
 .composer .privacy-note {
-  margin: 10px 0;
+  margin: 10px 0 0;
 }
 
 .draft-note {
@@ -909,21 +942,60 @@ textarea:disabled, .new-session input:disabled {
   line-height: 1.8;
 }
 
-.composer-actions {
+.composer-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
-.composer-actions > span {
+.composer-hint {
   font-size: 10px;
-  line-height: 1.9;
+  line-height: 1.8;
   color: var(--text-muted);
 }
 
-.composer-actions button {
+.send-button {
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity .15s ease, background .15s ease;
+}
+
+.send-button:hover:not(:disabled) {
+  background: #3f6b4d;
+}
+
+.send-button:disabled {
+  background: #dfe7dc;
+  color: #a9b6a7;
+  cursor: not-allowed;
+}
+
+.send-button.stop {
+  background: #eef3ed;
+  color: #3f6b4d;
+  border: 1px solid #d9e4d7;
+}
+
+.send-button.stop:hover {
+  background: #e4ece1;
+}
+
+.stop-square {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: currentColor;
+  display: block;
 }
 
 @media (max-width: 1000px) {
@@ -963,13 +1035,12 @@ textarea:disabled, .new-session input:disabled {
     font-size: 24px;
   }
 
-  .composer-actions {
-    align-items: flex-start;
-    flex-direction: column;
+  .composer-hint {
+    display: none;
   }
 
-  .composer-actions button {
-    align-self: flex-end;
+  .composer-bar {
+    justify-content: flex-end;
   }
 
   .message {

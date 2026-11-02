@@ -7,5 +7,5 @@ export const clearDecisionPreferences = () => request.delete('/decisions/prefere
 export const fetchDecisions = () => request.get('/decisions')
 export const createDecision = (data = {}) => request.post('/decisions', data)
 export const fetchDecisionMessages = (id) => request.get(`/decisions/${encodeURIComponent(id)}/messages`)
-export const sendDecisionMessage = (id, content) => request.post(`/decisions/${encodeURIComponent(id)}/messages`, {content}, {timeout: 120000})
+export const sendDecisionMessage = (id, content, signal) => request.post(`/decisions/${encodeURIComponent(id)}/messages`, {content}, {timeout: 120000, signal})
 export const deleteDecision = (id) => request.delete(`/decisions/${encodeURIComponent(id)}`)

@@ -31,7 +31,14 @@ request.interceptors.response.use(
         return Promise.reject(new Error(body.message || '请求失败'))
     },
     (error) => {
-        const message = error.response?.data?.message || '网络异常，请稍后重试'
+        if (error.code === 'ERR_CANCELED') {
+            // 主动取消与网络失败区分开，调用方据此显示“已停止”而不是报错
+            const canceled = new Error('请求已取消')
+            canceled.canceled = true
+            return Promise.reject(canceled)
+        }
+        const message = error.response?.data?.message
+            || (error.code === 'ECONNABORTED' ? '请求超时，请稍后重试' : '网络异常，请稍后重试')
         return Promise.reject(new Error(message))
     },
 )
