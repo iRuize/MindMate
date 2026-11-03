@@ -1,4 +1,5 @@
 import request from './request'
+import {resolveMediaUrl} from '@/utils/media'
 
 /** 获取验证码。伪装实现，返回值为验证码本身，不真实下发短信 */
 export const sendSmsCode = (phoneNumber) =>
@@ -22,7 +23,7 @@ export const uploadAvatar = (file) => {
 }
 
 /** 将服务端头像路径转换为可展示地址 */
-export const avatarAddress = (path) => path ? new URL(path, request.defaults.baseURL).href : ''
+export const avatarAddress = (path) => resolveMediaUrl(path)
 
 /** 退出登录，服务端销毁凭证 */
 export const logout = () => request.post('/auth/logout')

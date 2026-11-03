@@ -1,0 +1,18 @@
+[Unit]
+Description=MindMate backend
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/mindmate
+EnvironmentFile=/opt/mindmate/mindmate.env
+ExecStart=/usr/bin/java -Xms128m -Xmx448m -Duser.timezone=Asia/Shanghai -jar /opt/mindmate/app.jar
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

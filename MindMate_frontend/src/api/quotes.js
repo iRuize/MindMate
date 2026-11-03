@@ -1,4 +1,5 @@
 import request from './request'
+import {resolveMediaUrl} from '@/utils/media'
 
 /** 当前用户的经典语录，按新增倒序 */
 export const fetchQuotes = () => request.get('/quotes')
@@ -16,4 +17,4 @@ export const createQuote = ({content, source, file}, onUploadProgress) => {
 export const deleteQuote = (id) => request.delete(`/quotes/${encodeURIComponent(id)}`)
 
 /** 将服务端媒体路径转换为可展示地址 */
-export const mediaAddress = (path) => path ? new URL(path, request.defaults.baseURL).href : ''
+export const mediaAddress = (path) => resolveMediaUrl(path)

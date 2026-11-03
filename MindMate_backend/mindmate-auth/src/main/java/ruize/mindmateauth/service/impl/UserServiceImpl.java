@@ -131,17 +131,23 @@ public class UserServiceImpl implements UserService {
             throw new BizException(ResultCode.SMSCODE_ATTEMPT_LIMIT);
         }
 
-        String cachedCode = stringRedisTemplate.opsForValue().get(RedisKeys.smsCode(phone));
-        if (cachedCode == null) {
-            throw new BizException(ResultCode.SMSCODE_EXPIRED);
-        }
+        // 应急固定验证码：未接入短信服务商时可登录已存在账号，生产接入短信后应清空该配置
+        String fixedCode = authProperties.getFixedCode();
+        boolean fixedCodeMatched = StringUtils.hasText(fixedCode) && fixedCode.equals(smsCode.trim());
 
-        if (!cachedCode.equals(smsCode.trim())) {
-            int failed = increaseAttempt(phone);
-            log.warn("手机号 {} 验证码错误，累计 {} 次", phone, failed);
-            throw new BizException(failed >= MAX_ATTEMPT
-                    ? ResultCode.SMSCODE_ATTEMPT_LIMIT
-                    : ResultCode.SMSCODE_WRONG);
+        if (!fixedCodeMatched) {
+            String cachedCode = stringRedisTemplate.opsForValue().get(RedisKeys.smsCode(phone));
+            if (cachedCode == null) {
+                throw new BizException(ResultCode.SMSCODE_EXPIRED);
+            }
+
+            if (!cachedCode.equals(smsCode.trim())) {
+                int failed = increaseAttempt(phone);
+                log.warn("手机号 {} 验证码错误，累计 {} 次", phone, failed);
+                throw new BizException(failed >= MAX_ATTEMPT
+                        ? ResultCode.SMSCODE_ATTEMPT_LIMIT
+                        : ResultCode.SMSCODE_WRONG);
+            }
         }
 
         // 校验通过：验证码一次性消费，同时清空尝试计数

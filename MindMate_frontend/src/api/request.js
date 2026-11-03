@@ -3,8 +3,11 @@ import axios from 'axios'
 /** 登录凭证的本地存储键，路由守卫与请求拦截共用 */
 export const TOKEN_KEY = 'mindmate_token'
 
+// 生产环境由 Nginx 同源代理，VITE_API_BASE_URL 置空即可走相对路径
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL
+
 const request = axios.create({
-    baseURL: 'http://localhost:8080',
+    baseURL: configuredBaseUrl === undefined ? 'http://localhost:8080' : configuredBaseUrl,
     timeout: 10000,
 })
 
