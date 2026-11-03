@@ -52,8 +52,8 @@ const handleLogin = async () => {
     errorMessage.value = '请输入正确的 11 位手机号'
     return
   }
-  if (!/^[A-Za-z0-9]{6,32}$/.test(smsCode.value)) {
-    errorMessage.value = '请输入 6 至 32 位验证码'
+  if (!/^\d{6}$/.test(smsCode.value)) {
+    errorMessage.value = '请输入 6 位验证码'
     return
   }
   logging.value = true
@@ -97,8 +97,8 @@ onBeforeUnmount(() => {
                                                          inputmode="numeric" maxlength="11" placeholder="请输入手机号"
                                                          required type="tel"/></label>
           <label class="field"><span>验证码</span>
-            <div class="code-row"><input v-model.trim="smsCode" :disabled="logging" autocomplete="one-time-code"
-                                         maxlength="32" placeholder="请输入验证码" required
+            <div class="code-row"><input v-model.trim="smsCode" :disabled="logging" autocomplete="one-time-code" inputmode="numeric"
+                                         maxlength="6" placeholder="请输入 6 位验证码" required
                                          type="text"/>
               <button :disabled="countdown > 0 || sending || logging" class="code-button" type="button"
                       @click="handleSend">{{

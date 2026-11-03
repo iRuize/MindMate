@@ -25,10 +25,4 @@ public class AuthProperties {
      * 当前为伪装短信实现，置 true 便于自测；接入真实服务商后必须置 false。
      */
     private boolean exposeSmsCode = true;
-
-    /**
-     * 应急固定验证码。仅用于尚未接入真实短信的单机自托管场景，
-     * 配置后可用该值登录任意已存在账号；接入短信服务商后必须置空。
-     */
-    private String fixedCode;
 }
