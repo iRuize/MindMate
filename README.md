@@ -18,15 +18,15 @@ MindMate 分别用「任务事件流」「AI 决策对话」「经典语录」�
 
 ## 功能
 
-| 模块 | 说明 | 状态 |
-| --- | --- | --- |
-| 工作台 | 今日清单、本周完成数、专注入口 | 可用 |
-| 任务清单 | 增删改查、状态流转、计划日期、推迟与耗时记录 | 可用 |
+| 模块        | 说明                               | 状态 |
+| --------- | -------------------------------- | -- |
+| 工作台       | 今日清单、本周完成数、专注入口                  | 可用 |
+| 任务清单      | 增删改查、状态流转、计划日期、推迟与耗时记录           | 可用 |
 | 决策空间 · 对话 | 多会话，接入 DeepSeek，流式输出，Markdown 渲染 | 可用 |
-| 决策空间 · 记忆 | 五项自述偏好与记忆开关，按需注入模型 | 可用 |
-| 经典语录 | 文字 / 图片 / 视频三种载体，分列瀑布流展示 | 可用 |
-| 回顾与洞察 | 预留页面 | 占位 |
-| 个人中心 | 头像、昵称、签名、邮箱 | 可用 |
+| 决策空间 · 记忆 | 五项自述偏好与记忆开关，按需注入模型               | 可用 |
+| 经典语录      | 文字 / 图片 / 视频三种载体，分列瀑布流展示         | 可用 |
+| 回顾与洞察     | 预留页面                             | 占位 |
+| 个人中心      | 头像、昵称、签名、邮箱                      | 可用 |
 
 ## 技术栈
 
@@ -148,28 +148,28 @@ npm run dev
 
 ## 主要配置项
 
-| 配置 | 默认值 | 说明 |
-| --- | --- | --- |
-| `server.port` | `8080` | 后端端口 |
-| `spring.datasource.url` | `jdbc:dm://localhost:5236?schema=MINDMATE` | 达梦连接 |
-| `spring.redis.host` / `port` | `127.0.0.1` / `6379` | 登录态与限流 |
-| `mindmate.ai.api-key` | 空 | 建议放 `application-local.yaml` |
-| `mindmate.auth.token-ttl-hours` | `168` | 登录凭证有效期，滑动续期 |
-| `mindmate.auth.expose-sms-code` | `true` | 是否回传验证码，生产必须关闭 |
-| `mindmate.avatar.directory` | `./uploads/avatars` | 头像目录 |
-| `mindmate.quote.directory` | `./uploads/quotes` | 语录媒体目录 |
+| 配置                              | 默认值                                        | 说明                           |
+| ------------------------------- | ------------------------------------------ | ---------------------------- |
+| `server.port`                   | `8080`                                     | 后端端口                         |
+| `spring.datasource.url`         | `jdbc:dm://localhost:5236?schema=MINDMATE` | 达梦连接                         |
+| `spring.redis.host` / `port`    | `127.0.0.1` / `6379`                       | 登录态与限流                       |
+| `mindmate.ai.api-key`           | 空                                          | 建议放 `application-local.yaml` |
+| `mindmate.auth.token-ttl-hours` | `168`                                      | 登录凭证有效期，滑动续期                 |
+| `mindmate.auth.expose-sms-code` | `true`                                     | 是否回传验证码，生产必须关闭               |
+| `mindmate.avatar.directory`     | `./uploads/avatars`                        | 头像目录                         |
+| `mindmate.quote.directory`      | `./uploads/quotes`                         | 语录媒体目录                       |
 
 ## 数据模型
 
-| 表 | 作用 |
-| --- | --- |
-| `SYS_USER` | 用户，手机号唯一，表名避开达梦保留字 `USER` |
-| `TASK` | 任务当前状态快照，列表查询走它 |
-| `TASK_EVENT` | 不可变事件流，记录创建、推迟、开始、完成等行为 |
-| `DECISION_PREFERENCE` | 用户自述的五项偏好与记忆开关，不从对话隐式提取 |
-| `DECISION_SESSION` | 决策会话 |
-| `DECISION_MESSAGE` | 会话消息，模型成功后整轮落库 |
-| `SYS_QUOTE` | 经典语录，含一条可选媒体 |
+| 表                     | 作用                        |
+| --------------------- | ------------------------- |
+| `SYS_USER`            | 用户，手机号唯一，表名避开达梦保留字 `USER` |
+| `TASK`                | 任务当前状态快照，列表查询走它           |
+| `TASK_EVENT`          | 不可变事件流，记录创建、推迟、开始、完成等行为   |
+| `DECISION_PREFERENCE` | 用户自述的五项偏好与记忆开关，不从对话隐式提取   |
+| `DECISION_SESSION`    | 决策会话                      |
+| `DECISION_MESSAGE`    | 会话消息，模型成功后整轮落库            |
+| `SYS_QUOTE`           | 经典语录，含一条可选媒体              |
 
 三个设计取舍：
 
@@ -179,22 +179,22 @@ npm run dev
 
 ## 接口一览
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| `GET` | `/auth/sendSmsCode` | 获取验证码（伪装实现） |
-| `POST` | `/auth/login` | 登录，返回 token 与用户信息 |
-| `GET` / `PUT` | `/auth/me` | 查询、修改当前用户 |
-| `POST` | `/auth/avatar` | 上传头像，限 2MB |
-| `POST` | `/auth/logout` | 退出登录 |
-| `GET` / `POST` | `/tasks` | 任务列表与新建 |
-| `PUT` / `DELETE` | `/tasks/{id}` | 任务编辑与删除 |
-| `PUT` | `/tasks/{id}/status` | 状态流转，同时写入事件流 |
-| `GET` / `POST` / `DELETE` | `/decisions`、`/decisions/{id}` | 决策会话列表、新建、删除 |
-| `GET` / `POST` | `/decisions/{id}/messages` | 消息拉取与提问（流式返回） |
-| `GET` / `PUT` / `DELETE` | `/decisions/preferences` | 读取、保存、清空记忆 |
-| `GET` | `/decisions/config` | 模型配置状态 |
-| `GET` / `POST` / `DELETE` | `/quotes` | 语录读写，图片 5MB、视频 50MB |
-| `GET` | `/media/quotes/**`、`/avatars/**` | 静态媒体，公开读取 |
+| 方法                        | 路径                               | 说明                  |
+| ------------------------- | -------------------------------- | ------------------- |
+| `GET`                     | `/auth/sendSmsCode`              | 获取验证码（伪装实现）         |
+| `POST`                    | `/auth/login`                    | 登录，返回 token 与用户信息   |
+| `GET` / `PUT`             | `/auth/me`                       | 查询、修改当前用户           |
+| `POST`                    | `/auth/avatar`                   | 上传头像，限 2MB          |
+| `POST`                    | `/auth/logout`                   | 退出登录                |
+| `GET` / `POST`            | `/tasks`                         | 任务列表与新建             |
+| `PUT` / `DELETE`          | `/tasks/{id}`                    | 任务编辑与删除             |
+| `PUT`                     | `/tasks/{id}/status`             | 状态流转，同时写入事件流        |
+| `GET` / `POST` / `DELETE` | `/decisions`、`/decisions/{id}`   | 决策会话列表、新建、删除        |
+| `GET` / `POST`            | `/decisions/{id}/messages`       | 消息拉取与提问（流式返回）       |
+| `GET` / `PUT` / `DELETE`  | `/decisions/preferences`         | 读取、保存、清空记忆          |
+| `GET`                     | `/decisions/config`              | 模型配置状态              |
+| `GET` / `POST` / `DELETE` | `/quotes`                        | 语录读写，图片 5MB、视频 50MB |
+| `GET`                     | `/media/quotes/**`、`/avatars/**` | 静态媒体，公开读取           |
 
 ## 已知限制
 
