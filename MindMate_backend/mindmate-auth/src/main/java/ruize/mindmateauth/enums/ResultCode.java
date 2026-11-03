@@ -39,6 +39,11 @@ public enum ResultCode {
     DECISION_AI_SERVICE_ERROR(3009, "决策模型暂时不可用，请稍后重试"),
     DECISION_LOCKED(3010, "该决策会话正在处理中，请稍后再试"),
     DECISION_WRITE_FAILED(3011, "决策保存失败，请稍后再试"),
+    QUOTE_NOT_FOUND(4001, "语录不存在或已删除"),
+    QUOTE_MEDIA_INVALID(4002, "媒体格式不支持，图片支持JPG、PNG、WEBP，视频支持MP4、WEBM"),
+    QUOTE_MEDIA_TOO_LARGE(4003, "图片不能超过5MB，视频不能超过50MB"),
+    QUOTE_WRITE_FAILED(4004, "语录保存失败，请稍后再试"),
+    QUOTE_STORAGE_FAILED(4005, "语录媒体保存失败，请稍后再试"),
     SERVER_ERROR(1500, "服务器内部错误");
 
     private final int code;

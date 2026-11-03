@@ -108,7 +108,10 @@ const confirmDelete = async (task) => {
     <div class="page-heading">
       <div><h1 id="task-list-title">任务清单</h1>
         <p>把想做的事，整理成可以迈出的下一步。</p></div>
-      <button :disabled="disabled" class="button-primary" @click="openForm()">＋ 新增任务</button>
+      <div class="heading-actions">
+        <slot name="actions"/>
+        <button :disabled="disabled" class="button-primary" @click="openForm()">＋ 新增任务</button>
+      </div>
     </div>
 
     <form v-if="panelOpen" :aria-busy="submitting" class="task-form" @submit.prevent="submit">
@@ -213,6 +216,13 @@ const confirmDelete = async (task) => {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 26px;
+}
+
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
 }
 
 h1 {

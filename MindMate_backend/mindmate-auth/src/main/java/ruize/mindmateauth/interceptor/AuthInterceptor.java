@@ -26,6 +26,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final String HEADER = "Authorization";
     private static final String PREFIX = "Bearer ";
+    /**
+     * 语录媒体为公开静态资源，与 /avatars/** 一样不校验登录态
+     */
+    private static final String PUBLIC_MEDIA_PREFIX = "/media/quotes/";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final AuthProperties authProperties;
@@ -39,6 +43,11 @@ public class AuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         // 跨域预检不带凭证，直接放行
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
+        // 语录媒体是公开静态资源，无需登录态
+        if (request.getRequestURI().startsWith(PUBLIC_MEDIA_PREFIX)) {
             return true;
         }
 

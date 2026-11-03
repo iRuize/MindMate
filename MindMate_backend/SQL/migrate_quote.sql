@@ -1,0 +1,34 @@
+-- MindMate 经典语录表迁移（达梦 DM8）。
+-- @author 邸睿泽
+-- @since 2026-11-02
+-- 仅用于已按旧版 mindmate_schema.sql 建库的环境，部署新版后端前执行一次。
+-- 新建数据库请直接使用 mindmate_schema.sql，不要重复执行本文件。
+-- 本文件只新增表、约束与索引，不修改任何已有对象。
+
+CREATE TABLE "MINDMATE"."SYS_QUOTE"
+(
+    "ID"         BIGINT IDENTITY(1, 1)                 NOT NULL,
+    "USER_ID"    BIGINT                                NOT NULL,
+    "CONTENT" CLOB,
+    "SOURCE"     VARCHAR(200),
+    "MEDIA_TYPE" TINYINT   DEFAULT 0                   NOT NULL,
+    "MEDIA_URL"  VARCHAR(500),
+    "CREATED_AT" TIMESTAMP DEFAULT CURRENT_TIMESTAMP   NOT NULL,
+    "DELETED"    TINYINT   DEFAULT 0                   NOT NULL,
+    NOT CLUSTER PRIMARY KEY ("ID"),
+    CONSTRAINT "CK_SYS_QUOTE_MEDIA_TYPE" CHECK ("MEDIA_TYPE" IN (0, 1, 2)),
+    CONSTRAINT "CK_SYS_QUOTE_DELETED" CHECK ("DELETED" IN (0, 1))
+) STORAGE(ON "MAIN", CLUSTERBTR);
+
+COMMENT ON TABLE "MINDMATE"."SYS_QUOTE" IS '经典语录，含可选图片或视频媒体';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."ID" IS '语录ID';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."USER_ID" IS '归属用户ID';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."CONTENT" IS '语录正文，应用限制2000字符，不含媒体时为唯一内容';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."SOURCE" IS '语录出处，应用限制200字符';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."MEDIA_TYPE" IS '媒体类型：0无 1图片 2视频';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."MEDIA_URL" IS '媒体公开访问路径，形如 /media/quotes/文件名';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."CREATED_AT" IS '创建时间';
+COMMENT ON COLUMN "MINDMATE"."SYS_QUOTE"."DELETED" IS '逻辑删除：0正常 1已删除';
+
+-- 列表查询固定按 USER_ID 过滤、DELETED 判活、ID 倒序，三列联合索引可避免回表排序
+CREATE INDEX "IDX_SYS_QUOTE_USER_DELETED_ID" ON "MINDMATE"."SYS_QUOTE" ("USER_ID", "DELETED", "ID");

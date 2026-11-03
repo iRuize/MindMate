@@ -5,9 +5,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
   servlet:
     multipart:
-      max-file-size: 2MB
-      # 为 multipart 边界和表单头预留空间，文件本身仍限制为 2MB
-      max-request-size: 3MB
+      # 语录允许上传 50MB 视频，单文件上限放宽到 60MB
+      # 头像仍由 AvatarStorage 在业务层限制为 2MB，此处放宽不会放大头像上限
+      max-file-size: 60MB
+      # 为 multipart 边界和表单头预留空间，请求总大小 65MB
+      max-request-size: 65MB
   datasource:
     # 本地达梦 DM8，默认模式 MINDMATE
     driver-class-name: dm.jdbc.driver.DmDriver
@@ -56,3 +58,6 @@ mindmate:
     token-ttl-hours: 168
     # 伪装短信：验证码是否随响应体回传。接入真实短信服务商后必须改为 false
     expose-sms-code: true
+  quote:
+    # 语录图片与视频目录，与 /media/quotes/** 静态映射共用；相对路径基于后端进程工作目录
+    directory: ${MINDMATE_QUOTE_DIRECTORY:./uploads/quotes}
